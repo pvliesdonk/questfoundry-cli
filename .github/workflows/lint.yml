@@ -11,11 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: astral-sh/setup-uv@v3
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: uv sync
+      - run: uv sync --extra dev
       - run: uv run ruff check .
       - run: uv run mypy src
       

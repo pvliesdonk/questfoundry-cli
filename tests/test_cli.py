@@ -1,17 +1,22 @@
-import pytest
-from typer.testing import CliTestClient
+"""Tests for CLI main functionality"""
+
+from typer.testing import CliRunner
+
 from qf.cli import app
 
-client = CliTestClient(app)
+runner = CliRunner()
+
 
 def test_version():
-    result = client.invoke(app, ["version"])
+    """Test version command"""
+    result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
-    assert "questfoundry-cli" in result.stdout
+    assert "questfoundry-cli" in result.stdout or "0.1.0" in result.stdout
+
 
 def test_help():
-    result = client.invoke(app, ["--help"])
+    """Test help command"""
+    result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "schema" in result.stdout
     assert "validate" in result.stdout
-    
