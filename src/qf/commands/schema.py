@@ -28,6 +28,8 @@ def get_schemas_path() -> Path:
         if pkg_schemas.exists():
             return pkg_schemas
     except ImportError:
+        # questfoundry-py not installed or doesn't have resources yet
+        # Fall through to raise FileNotFoundError
         pass
 
     raise FileNotFoundError("Schema directory not found")
@@ -67,13 +69,13 @@ def list_() -> None:
     table.add_column("Schema Name", style="cyan")
     table.add_column("Type", style="magenta")
 
-    schema_name: str
     for schema_name in sorted(schemas):
         try:
             schema = get_schema(schema_name)
             schema_type: str = schema.get("type", "unknown")
             table.add_row(schema_name, schema_type)
-        except Exception:
+        except (FileNotFoundError, json.JSONDecodeError, AttributeError):
+            # Schema file missing, malformed JSON, or missing 'type' field
             table.add_row(schema_name, "error")
 
     console.print(table)
