@@ -8,15 +8,9 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.syntax import Syntax
 
+from qf.utils import find_project_file
+
 console = Console()
-
-
-def find_project_file() -> Path | None:
-    """Find .qfproj file in current directory"""
-    project_files = list(Path.cwd().glob("*.qfproj"))
-    if project_files:
-        return project_files[0]
-    return None
 
 
 def find_artifact(artifact_id: str) -> Path | None:
@@ -27,6 +21,9 @@ def find_artifact(artifact_id: str) -> Path | None:
 
     # Search in all hot workspace subdirectories
     hot_path = workspace / "hot"
+    if not hot_path.exists():
+        return None
+
     for artifact_dir in hot_path.iterdir():
         if artifact_dir.is_dir():
             # Try exact match
@@ -102,6 +99,7 @@ def show_artifact(artifact_id: str = typer.Argument(..., help="Artifact ID")) ->
     except json.JSONDecodeError:
         console.print(f"[red]Error: Invalid JSON in {artifact_file}[/red]")
         raise typer.Exit(1)
-    except Exception as e:
+    except (OSError, PermissionError) as e:
+        # File not found, permission denied, or other I/O errors
         console.print(f"[red]Error reading artifact: {e}[/red]")
         raise typer.Exit(1)

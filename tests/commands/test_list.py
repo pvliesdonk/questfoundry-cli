@@ -1,7 +1,5 @@
 """Tests for qf list command"""
 
-import json
-from pathlib import Path
 
 from typer.testing import CliRunner
 

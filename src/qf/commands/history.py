@@ -8,15 +8,9 @@ from rich.console import Console
 from rich.table import Table
 from rich.tree import Tree
 
+from qf.utils import find_project_file
+
 console = Console()
-
-
-def find_project_file() -> Path | None:
-    """Find .qfproj file in current directory"""
-    project_files = list(Path.cwd().glob("*.qfproj"))
-    if project_files:
-        return project_files[0]
-    return None
 
 
 def history_command(
@@ -58,7 +52,6 @@ def history_command(
                         "title": data.get("title", "Untitled"),
                         "status": data.get("status", "unknown"),
                         "loops": data.get("loops", []),
-                        "file": tu_file.name,
                     }
                 )
         except (json.JSONDecodeError, KeyError):

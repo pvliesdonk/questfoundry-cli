@@ -8,15 +8,9 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from qf.utils import ARTIFACT_TYPES, find_project_file
+
 console = Console()
-
-
-def find_project_file() -> Path | None:
-    """Find .qfproj file in current directory"""
-    project_files = list(Path.cwd().glob("*.qfproj"))
-    if project_files:
-        return project_files[0]
-    return None
 
 
 def list_artifacts(
@@ -45,7 +39,10 @@ def list_artifacts(
     if artifact_type:
         types_to_list = [artifact_type]
     else:
-        types_to_list = ["hooks", "canon", "codex", "tus", "artifacts"]
+        types_to_list = ARTIFACT_TYPES
+
+    # Track whether any artifacts exist
+    found_any = False
 
     # Display artifacts
     for atype in types_to_list:
@@ -55,6 +52,8 @@ def list_artifacts(
             if artifact_type:  # Only show error if specific type requested
                 console.print(f"[yellow]No {atype} found in workspace[/yellow]")
             continue
+
+        found_any = True
 
         # Get all JSON files
         artifact_files = list(hot_path.glob("*.json"))
@@ -100,7 +99,7 @@ def list_artifacts(
             console.print(table)
 
     # If no artifacts at all
-    if not any((workspace / "hot" / t).exists() for t in types_to_list):
+    if not found_any:
         console.print("\n[dim]No artifacts in workspace yet.[/dim]")
         console.print(
             "[dim]Artifacts will appear here once you start working with loops.[/dim]\n"

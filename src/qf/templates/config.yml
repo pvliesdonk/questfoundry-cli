@@ -1,0 +1,18 @@
+# QuestFoundry Configuration
+
+# Provider settings (will be used once Layer 6 is ready)
+providers:
+  text:
+    default: openai
+    # Add your provider config here
+
+# CLI preferences
+ui:
+  color: true
+  progress_bars: true
+  editor: $EDITOR
+
+# Quickstart defaults
+quickstart:
+  mode: guided  # guided | interactive | express
+  auto_continue: false

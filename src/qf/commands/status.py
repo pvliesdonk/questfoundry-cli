@@ -2,27 +2,14 @@
 
 import json
 from pathlib import Path
-from typing import Any
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
+from qf.utils import find_project_file, load_project_metadata
+
 console = Console()
-
-
-def find_project_file() -> Path | None:
-    """Find .qfproj file in current directory"""
-    project_files = list(Path.cwd().glob("*.qfproj"))
-    if project_files:
-        return project_files[0]
-    return None
-
-
-def load_project_metadata(project_file: Path) -> Any:
-    """Load project metadata from .qfproj file"""
-    with open(project_file) as f:
-        return json.load(f)
 
 
 def status_command() -> None:
@@ -96,6 +83,7 @@ def status_command() -> None:
     except json.JSONDecodeError:
         console.print(f"[red]Error: Invalid project file: {project_file}[/red]")
         raise typer.Exit(1)
-    except Exception as e:
+    except (OSError, PermissionError) as e:
+        # File not found, permission denied, or other I/O errors
         console.print(f"[red]Error reading project: {e}[/red]")
         raise typer.Exit(1)

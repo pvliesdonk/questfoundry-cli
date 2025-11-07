@@ -46,27 +46,12 @@ def create_project_structure(
     with open(project_file, "w") as f:
         json.dump(metadata, f, indent=2)
 
-    # Create default config
+    # Create default config from template
     config_file = workspace / "config.yml"
-    config_content = """# QuestFoundry Configuration
+    template_path = Path(__file__).parent.parent / "templates" / "config.yml"
 
-# Provider settings (will be used once Layer 6 is ready)
-providers:
-  text:
-    default: openai
-    # Add your provider config here
-
-# CLI preferences
-ui:
-  color: true
-  progress_bars: true
-  editor: $EDITOR
-
-# Quickstart defaults
-quickstart:
-  mode: guided  # guided | interactive | express
-  auto_continue: false
-"""
+    with open(template_path) as template:
+        config_content = template.read()
 
     with open(config_file, "w") as f:
         f.write(config_content)

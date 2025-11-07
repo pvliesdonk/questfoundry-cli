@@ -1,7 +1,6 @@
 """Tests for qf status command"""
 
 import json
-from pathlib import Path
 
 from typer.testing import CliRunner
 
