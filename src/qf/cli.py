@@ -3,6 +3,11 @@
 import typer
 
 from .commands import artifact, schema, validate
+from .commands.history import history_command
+from .commands.init import init_command
+from .commands.list import list_artifacts
+from .commands.show import show_artifact
+from .commands.status import status_command
 from .utils.formatting import print_header, print_success
 from .version import get_version
 
@@ -16,6 +21,13 @@ app = typer.Typer(
 app.add_typer(schema.app, name="schema", help="Manage schemas")
 app.add_typer(validate.app, name="validate", help="Validate artifacts and envelopes")
 app.add_typer(artifact.app, name="artifact", help="Work with artifacts")
+
+# Add project commands
+app.command(name="init", help="Initialize a new project")(init_command)
+app.command(name="status", help="Show project status")(status_command)
+app.command(name="list", help="List artifacts")(list_artifacts)
+app.command(name="show", help="Show artifact details")(show_artifact)
+app.command(name="history", help="Show project history")(history_command)
 
 
 @app.command()
