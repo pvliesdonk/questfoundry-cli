@@ -137,7 +137,7 @@ def test_check_with_missing_required_fields(
 
     artifact = {
         "title": "Test Hook",
-        # Missing 'id' and 'type'
+        # missing 'id' and 'type'
     }
 
     with open(hooks_dir / "incomplete.json", "w") as f:

@@ -139,7 +139,7 @@ def test_validate_artifact_in_project(tmp_path, monkeypatch, mock_questionary_in
     codex_dir.mkdir(parents=True, exist_ok=True)
 
     artifact = {
-        "type": "codex_entry",  # Add type for auto-detection
+        "type": "codex_entry",  # add type for auto-detection
         "title": "Test Entry",
         "slug": "test-entry",
         "locale": "EN",
@@ -203,7 +203,7 @@ def test_validate_artifact_missing_type_field(
     artifact = {
         "id": "test-hook-001",
         "title": "Test Hook",
-        # No type field
+        # no type field
     }
 
     with open(hooks_dir / "test-hook-001.json", "w") as f:

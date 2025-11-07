@@ -1,6 +1,7 @@
 """Validation commands"""
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -10,44 +11,64 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from qf.commands.schema import get_schemas_path
 from qf.utils import find_project_file
 
 app = typer.Typer(help="Validate artifacts and envelopes")
 console = Console()
+logger = logging.getLogger(__name__)
 
 
-def get_schema_path(schema_name: str) -> Path:
-    """Get path to a schema file"""
-    # First, try spec submodule
-    spec_path = Path(__file__).parent.parent.parent.parent / "spec" / "03-schemas"
-    schema_file = spec_path / f"{schema_name}.schema.json"
+class SchemaNotFoundError(Exception):
+    """Raised when a schema file cannot be found"""
 
-    if schema_file.exists():
-        return schema_file
+    pass
 
-    # If not found, raise error
-    raise FileNotFoundError(f"Schema not found: {schema_name}")
+
+class SchemaValidationError(Exception):
+    """Raised when schema file is invalid"""
+
+    pass
 
 
 def load_schema(schema_name: str) -> dict[str, Any]:
-    """Load a JSON schema"""
-    schema_path = get_schema_path(schema_name)
+    """
+    Load a JSON schema.
+
+    Args:
+        schema_name: Name of the schema (without .schema.json extension)
+
+    Returns:
+        Schema dictionary
+
+    Raises:
+        SchemaNotFoundError: If schema file doesn't exist
+        SchemaValidationError: If schema file is invalid JSON or not a dict
+    """
+    try:
+        schemas_path = get_schemas_path()
+    except FileNotFoundError as e:
+        raise SchemaNotFoundError(f"Schema directory not found: {e}") from e
+
+    schema_file = schemas_path / f"{schema_name}.schema.json"
+
+    if not schema_file.exists():
+        raise SchemaNotFoundError(f"Schema not found: {schema_name}")
 
     try:
-        with open(schema_path) as f:
+        with open(schema_file) as f:
             schema = json.load(f)
             if not isinstance(schema, dict):
-                console.print(
-                    f"[red]Error: Schema {schema_name} is not a valid object[/red]"
+                raise SchemaValidationError(
+                    f"Schema {schema_name} is not a valid object"
                 )
-                raise typer.Exit(1)
             return schema
     except json.JSONDecodeError as e:
-        console.print(f"[red]Error: Invalid JSON in schema {schema_name}: {e}[/red]")
-        raise typer.Exit(1)
+        raise SchemaValidationError(
+            f"Invalid JSON in schema {schema_name}: {e}"
+        ) from e
     except OSError as e:
-        console.print(f"[red]Error reading schema {schema_name}: {e}[/red]")
-        raise typer.Exit(1)
+        raise SchemaValidationError(f"Error reading schema {schema_name}: {e}") from e
 
 
 def validate_artifact_data(
@@ -55,55 +76,78 @@ def validate_artifact_data(
 ) -> tuple[bool, list[str]]:
     """
     Validate artifact data against a schema.
-    Returns (is_valid, errors) tuple.
+
+    This is a pure function that performs validation without side effects.
+
+    Args:
+        data: Artifact data to validate
+        schema_name: Name of the schema to validate against
+
+    Returns:
+        Tuple of (is_valid, errors) where errors is a list of error messages
+
+    Raises:
+        SchemaNotFoundError: If schema doesn't exist
+        SchemaValidationError: If schema is invalid
     """
-    try:
-        schema = load_schema(schema_name)
-        validator = jsonschema.Draft7Validator(schema)
-        errors = []
+    schema = load_schema(schema_name)
+    validator = jsonschema.Draft7Validator(schema)
+    errors = []
 
-        for error in validator.iter_errors(data):
-            # Format error message with path
-            path = ".".join(str(p) for p in error.path) if error.path else "root"
-            errors.append(f"{path}: {error.message}")
+    for error in validator.iter_errors(data):
+        # format error message with path
+        path = ".".join(str(p) for p in error.path) if error.path else "root"
+        errors.append(f"{path}: {error.message}")
 
-        return len(errors) == 0, errors
-
-    except FileNotFoundError:
-        console.print(f"[red]Schema not found: {schema_name}[/red]")
-        console.print(
-            "\n[cyan]Tip:[/cyan] Run [green]qf schema list[/green] "
-            "to see available schemas"
-        )
-        raise typer.Exit(1)
+    return len(errors) == 0, errors
 
 
 def find_artifact_file(artifact_id: str) -> Path | None:
-    """Find artifact file by ID in workspace"""
+    """
+    Find artifact file by ID in workspace.
+
+    Args:
+        artifact_id: The artifact ID to search for
+
+    Returns:
+        Path to artifact file, or None if not found
+
+    Note:
+        Logs warnings for malformed JSON files encountered during search.
+    """
     workspace = Path(".questfoundry")
     if not workspace.exists():
         return None
 
-    # Search in all hot workspace subdirectories
+    # search in all hot workspace subdirectories
     hot_path = workspace / "hot"
     if not hot_path.exists():
         return None
 
     for artifact_dir in hot_path.iterdir():
         if artifact_dir.is_dir():
-            # Try exact match
+            # try exact match
             artifact_file = artifact_dir / f"{artifact_id}.json"
             if artifact_file.exists():
                 return artifact_file
 
-            # Try matching by ID in file content
+            # try matching by ID in file content
             for json_file in artifact_dir.glob("*.json"):
                 try:
                     with open(json_file) as f:
                         data = json.load(f)
                     if data.get("id") == artifact_id:
                         return json_file
-                except (json.JSONDecodeError, KeyError, OSError):
+                except json.JSONDecodeError as e:
+                    logger.warning(
+                        "Skipping malformed JSON file %s: %s", json_file, str(e)
+                    )
+                    continue
+                except OSError as e:
+                    logger.warning("Error reading file %s: %s", json_file, str(e))
+                    continue
+                except (KeyError, AttributeError):
+                    # data.get() shouldn't raise these, but be defensive
                     continue
 
     return None
@@ -167,7 +211,18 @@ def validate_artifact(
         f"against schema [cyan]{schema}[/cyan]...\n"
     )
 
-    is_valid, errors = validate_artifact_data(data, schema)
+    try:
+        is_valid, errors = validate_artifact_data(data, schema)
+    except SchemaNotFoundError:
+        console.print(f"[red]Schema not found: {schema}[/red]")
+        console.print(
+            "\n[cyan]Tip:[/cyan] Run [green]qf schema list[/green] "
+            "to see available schemas"
+        )
+        raise typer.Exit(1)
+    except SchemaValidationError as e:
+        console.print(f"[red]Error loading schema: {e}[/red]")
+        raise typer.Exit(1)
 
     if is_valid:
         console.print(Panel("[green]✓ Artifact is valid[/green]", border_style="green"))
@@ -220,7 +275,18 @@ def validate_file(
         f"against schema [cyan]{schema}[/cyan]...\n"
     )
 
-    is_valid, errors = validate_artifact_data(data, schema)
+    try:
+        is_valid, errors = validate_artifact_data(data, schema)
+    except SchemaNotFoundError:
+        console.print(f"[red]Schema not found: {schema}[/red]")
+        console.print(
+            "\n[cyan]Tip:[/cyan] Run [green]qf schema list[/green] "
+            "to see available schemas"
+        )
+        raise typer.Exit(1)
+    except SchemaValidationError as e:
+        console.print(f"[red]Error loading schema: {e}[/red]")
+        raise typer.Exit(1)
 
     if is_valid:
         console.print(Panel("[green]✓ File is valid[/green]", border_style="green"))

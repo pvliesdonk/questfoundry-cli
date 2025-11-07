@@ -1,51 +1,56 @@
 """Quality check and gatecheck commands"""
 
 import json
+import logging
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
+from typing import Any
 
 import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from qf.commands.validate import validate_artifact_data
+from qf.commands.validate import (
+    SchemaNotFoundError,
+    SchemaValidationError,
+    validate_artifact_data,
+)
 from qf.utils import find_project_file
 
 app = typer.Typer(help="Run quality checks and gatechecks")
 console = Console()
+logger = logging.getLogger(__name__)
 
 
-def check_json_validity(workspace: Path) -> tuple[bool, list[str]]:
-    """Check that all JSON files in workspace are valid"""
-    errors = []
+@dataclass
+class ArtifactData:
+    """Parsed artifact file data"""
+
+    path: Path
+    data: dict[str, Any] | None
+    error: str | None
+
+
+def load_all_artifacts(workspace: Path) -> list[ArtifactData]:
+    """
+    Load all JSON files in workspace in a single pass.
+
+    This consolidates file system operations to improve performance
+    and allows individual checks to be self-contained.
+
+    Args:
+        workspace: Path to .questfoundry workspace
+
+    Returns:
+        List of ArtifactData objects, including files with errors
+    """
+    artifacts: list[ArtifactData] = []
     hot_path = workspace / "hot"
 
     if not hot_path.exists():
-        return True, []
-
-    for artifact_dir in hot_path.iterdir():
-        if artifact_dir.is_dir():
-            for json_file in artifact_dir.glob("*.json"):
-                try:
-                    with open(json_file) as f:
-                        json.load(f)
-                except json.JSONDecodeError as e:
-                    errors.append(f"{json_file.name}: {str(e)}")
-                except OSError as e:
-                    errors.append(f"{json_file.name}: Could not read file ({e})")
-
-    return len(errors) == 0, errors
-
-
-def check_schema_conformance(workspace: Path) -> tuple[bool, list[str]]:
-    """Check that all artifacts conform to their schemas"""
-    errors = []
-    hot_path = workspace / "hot"
-
-    if not hot_path.exists():
-        return True, []
+        return artifacts
 
     for artifact_dir in hot_path.iterdir():
         if artifact_dir.is_dir():
@@ -53,114 +58,168 @@ def check_schema_conformance(workspace: Path) -> tuple[bool, list[str]]:
                 try:
                     with open(json_file) as f:
                         data = json.load(f)
-
-                    # Get artifact type
-                    artifact_type = data.get("type")
-                    if not artifact_type:
-                        errors.append(f"{json_file.name}: No 'type' field")
-                        continue
-
-                    # Validate against schema
-                    try:
-                        is_valid, validation_errors = validate_artifact_data(
-                            data, artifact_type
+                    artifacts.append(
+                        ArtifactData(path=json_file, data=data, error=None)
+                    )
+                except json.JSONDecodeError as e:
+                    logger.warning("Malformed JSON in %s: %s", json_file, str(e))
+                    artifacts.append(
+                        ArtifactData(
+                            path=json_file,
+                            data=None,
+                            error=f"Invalid JSON: {str(e)}",
                         )
-                        if not is_valid:
-                            errors.append(
-                                f"{json_file.name}: "
-                                f"{len(validation_errors)} validation error(s)"
-                            )
-                    except (FileNotFoundError, typer.Exit):
-                        # Schema doesn't exist - that's OK, skip validation
-                        pass
+                    )
+                except OSError as e:
+                    logger.warning("Error reading %s: %s", json_file, str(e))
+                    artifacts.append(
+                        ArtifactData(
+                            path=json_file,
+                            data=None,
+                            error=f"Could not read file: {str(e)}",
+                        )
+                    )
 
-                except (json.JSONDecodeError, OSError):
-                    # Already caught by JSON validity check
-                    pass
+    return artifacts
+
+
+def check_json_validity(artifacts: list[ArtifactData]) -> tuple[bool, list[str]]:
+    """
+    Check that all JSON files are valid and parseable.
+
+    This check is self-contained and reports all file reading errors.
+    """
+    errors = []
+
+    for artifact in artifacts:
+        if artifact.error:
+            errors.append(f"{artifact.path.name}: {artifact.error}")
 
     return len(errors) == 0, errors
 
 
-def check_required_fields(workspace: Path) -> tuple[bool, list[str]]:
-    """Check that artifacts have required common fields"""
+def check_schema_conformance(artifacts: list[ArtifactData]) -> tuple[bool, list[str]]:
+    """
+    Check that all artifacts conform to their schemas.
+
+    This check is self-contained and reports all schema validation errors.
+    """
     errors = []
-    hot_path = workspace / "hot"
 
-    if not hot_path.exists():
-        return True, []
+    for artifact in artifacts:
+        # skip files with parse errors (handled by integrity check)
+        if artifact.data is None:
+            continue
 
+        # get artifact type
+        artifact_type = artifact.data.get("type")
+        if not artifact_type:
+            # this will be caught by required fields check
+            continue
+
+        # validate against schema
+        try:
+            is_valid, validation_errors = validate_artifact_data(
+                artifact.data, artifact_type
+            )
+            if not is_valid:
+                errors.append(
+                    f"{artifact.path.name}: "
+                    f"{len(validation_errors)} validation error(s)"
+                )
+        except SchemaNotFoundError:
+            # schema doesn't exist - that's OK, skip validation
+            logger.debug(
+                "Schema %s not found for %s, skipping", artifact_type, artifact.path
+            )
+        except SchemaValidationError as e:
+            # schema file itself is invalid
+            logger.warning("Invalid schema %s: %s", artifact_type, str(e))
+            errors.append(f"{artifact.path.name}: Schema error ({str(e)})")
+
+    return len(errors) == 0, errors
+
+
+def check_required_fields(artifacts: list[ArtifactData]) -> tuple[bool, list[str]]:
+    """
+    Check that artifacts have required common fields.
+
+    This check is self-contained and reports all missing required fields.
+    """
+    errors = []
     required_fields = ["id", "type"]
 
-    for artifact_dir in hot_path.iterdir():
-        if artifact_dir.is_dir():
-            for json_file in artifact_dir.glob("*.json"):
-                try:
-                    with open(json_file) as f:
-                        data = json.load(f)
+    for artifact in artifacts:
+        # skip files with parse errors (handled by integrity check)
+        if artifact.data is None:
+            continue
 
-                    for field in required_fields:
-                        if field not in data:
-                            errors.append(f"{json_file.name}: Missing '{field}' field")
-
-                except (json.JSONDecodeError, OSError):
-                    # Already caught by other checks
-                    pass
+        for field in required_fields:
+            if field not in artifact.data:
+                errors.append(f"{artifact.path.name}: Missing '{field}' field")
 
     return len(errors) == 0, errors
 
 
-def check_naming_conventions(workspace: Path) -> tuple[bool, list[str]]:
-    """Check that files follow naming conventions"""
+def check_naming_conventions(artifacts: list[ArtifactData]) -> tuple[bool, list[str]]:
+    """
+    Check that files follow naming conventions.
+
+    This check is self-contained and reports all naming violations.
+    """
     errors = []
-    hot_path = workspace / "hot"
 
-    if not hot_path.exists():
-        return True, []
+    for artifact in artifacts:
+        # skip files with parse errors (handled by integrity check)
+        if artifact.data is None:
+            continue
 
-    for artifact_dir in hot_path.iterdir():
-        if artifact_dir.is_dir():
-            for json_file in artifact_dir.glob("*.json"):
-                # Check that filename matches artifact ID
-                try:
-                    with open(json_file) as f:
-                        data = json.load(f)
-
-                    artifact_id = data.get("id")
-                    if artifact_id and f"{artifact_id}.json" != json_file.name:
-                        errors.append(
-                            f"{json_file.name}: Filename doesn't match "
-                            f"artifact ID '{artifact_id}'"
-                        )
-
-                except (json.JSONDecodeError, OSError):
-                    # Already caught by other checks
-                    pass
+        artifact_id = artifact.data.get("id")
+        if artifact_id and f"{artifact_id}.json" != artifact.path.name:
+            errors.append(
+                f"{artifact.path.name}: Filename doesn't match "
+                f"artifact ID '{artifact_id}'"
+            )
 
     return len(errors) == 0, errors
+
+
+@dataclass
+class QualityBar:
+    """Quality bar definition"""
+
+    id: str
+    name: str
+    description: str
+    check: Callable[[list[ArtifactData]], tuple[bool, list[str]]]
 
 
 # Quality bar definitions
-QUALITY_BARS: dict[str, dict[str, str | Callable[[Path], tuple[bool, list[str]]]]] = {
-    "integrity": {
-        "name": "Integrity",
-        "description": "All JSON files are valid and parseable",
-        "check": check_json_validity,
-    },
-    "schema": {
-        "name": "Schema Conformance",
-        "description": "All artifacts conform to their schemas",
-        "check": check_schema_conformance,
-    },
-    "required": {
-        "name": "Required Fields",
-        "description": "All artifacts have required common fields",
-        "check": check_required_fields,
-    },
-    "naming": {
-        "name": "Naming Conventions",
-        "description": "Files follow naming conventions",
-        "check": check_naming_conventions,
-    },
+QUALITY_BARS: dict[str, QualityBar] = {
+    "integrity": QualityBar(
+        id="integrity",
+        name="Integrity",
+        description="All JSON files are valid and parseable",
+        check=check_json_validity,
+    ),
+    "schema": QualityBar(
+        id="schema",
+        name="Schema Conformance",
+        description="All artifacts conform to their schemas",
+        check=check_schema_conformance,
+    ),
+    "required": QualityBar(
+        id="required",
+        name="Required Fields",
+        description="All artifacts have required common fields",
+        check=check_required_fields,
+    ),
+    "naming": QualityBar(
+        id="naming",
+        name="Naming Conventions",
+        description="Files follow naming conventions",
+        check=check_naming_conventions,
+    ),
 }
 
 
@@ -206,16 +265,16 @@ def run(
     else:
         bars_to_run = list(QUALITY_BARS.keys())
 
-    # Run checks
+    # Load all artifacts once
     console.print("\n[bold cyan]Running Quality Checks[/bold cyan]\n")
+    artifacts = load_all_artifacts(workspace)
 
+    # Run checks
     results: dict[str, tuple[bool, list[str]]] = {}
     for bar_id in bars_to_run:
         bar = QUALITY_BARS[bar_id]
-        bar_name = cast(str, bar["name"])
-        bar_check = cast(Callable[[Path], tuple[bool, list[str]]], bar["check"])
-        console.print(f"Running {bar_name}...")
-        passed, errors = bar_check(workspace)
+        console.print(f"Running {bar.name}...")
+        passed, errors = bar.check(artifacts)
         results[bar_id] = (passed, errors)
 
     # Display results
@@ -229,7 +288,6 @@ def run(
     all_passed = True
     for bar_id in bars_to_run:
         bar = QUALITY_BARS[bar_id]
-        bar_name = cast(str, bar["name"])
         passed, errors = results[bar_id]
 
         if passed:
@@ -240,7 +298,7 @@ def run(
             issues = str(len(errors))
             all_passed = False
 
-        table.add_row(bar_name, status, issues)
+        table.add_row(bar.name, status, issues)
 
     console.print(table)
 
@@ -251,8 +309,7 @@ def run(
             passed, errors = results[bar_id]
             if not passed:
                 bar = QUALITY_BARS[bar_id]
-                bar_name = cast(str, bar["name"])
-                console.print(f"[cyan]{bar_name}:[/cyan]")
+                console.print(f"[cyan]{bar.name}:[/cyan]")
                 for error in errors:
                     console.print(f"  • {error}")
                 console.print()
