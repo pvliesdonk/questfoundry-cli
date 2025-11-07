@@ -2,7 +2,7 @@
 
 import typer
 
-from .commands import artifact, schema, validate
+from .commands import artifact, config, provider, schema, validate
 from .commands.history import history_command
 from .commands.init import init_command
 from .commands.list import list_artifacts
@@ -21,6 +21,8 @@ app = typer.Typer(
 app.add_typer(schema.app, name="schema", help="Manage schemas")
 app.add_typer(validate.app, name="validate", help="Validate artifacts and envelopes")
 app.add_typer(artifact.app, name="artifact", help="Work with artifacts")
+app.add_typer(config.app, name="config", help="Manage project configuration")
+app.add_typer(provider.app, name="provider", help="Manage AI providers")
 
 # Add project commands
 app.command(name="init", help="Initialize a new project")(init_command)
