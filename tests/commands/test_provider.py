@@ -1,6 +1,5 @@
 """Tests for provider commands"""
 
-import questionary
 from typer.testing import CliRunner
 
 from qf.cli import app
@@ -8,22 +7,9 @@ from qf.cli import app
 runner = CliRunner()
 
 
-def test_provider_list_in_project(tmp_path, monkeypatch):
+def test_provider_list_in_project(tmp_path, monkeypatch, mock_questionary_init):
     """Test listing providers in a project"""
     monkeypatch.chdir(tmp_path)
-
-    # Mock questionary
-    original_text = questionary.text
-
-    def mock_text(message, **kwargs):
-        result = original_text(message, **kwargs)
-        if "name" in message.lower():
-            result.ask = lambda: "test-project"
-        elif "description" in message.lower():
-            result.ask = lambda: "Test description"
-        return result
-
-    monkeypatch.setattr(questionary, "text", mock_text)
 
     # Initialize project
     result = runner.invoke(app, ["init"])
@@ -46,22 +32,9 @@ def test_provider_list_without_project(tmp_path, monkeypatch):
     assert "No project found" in result.stdout
 
 
-def test_provider_list_shows_default(tmp_path, monkeypatch):
+def test_provider_list_shows_default(tmp_path, monkeypatch, mock_questionary_init):
     """Test that provider list shows the default provider"""
     monkeypatch.chdir(tmp_path)
-
-    # Mock questionary
-    original_text = questionary.text
-
-    def mock_text(message, **kwargs):
-        result = original_text(message, **kwargs)
-        if "name" in message.lower():
-            result.ask = lambda: "test-project"
-        elif "description" in message.lower():
-            result.ask = lambda: "Test description"
-        return result
-
-    monkeypatch.setattr(questionary, "text", mock_text)
 
     # Initialize project
     result = runner.invoke(app, ["init"])
@@ -79,22 +52,11 @@ def test_provider_list_shows_default(tmp_path, monkeypatch):
             assert "✓" in line
 
 
-def test_provider_list_shows_configured_status(tmp_path, monkeypatch):
+def test_provider_list_shows_configured_status(
+    tmp_path, monkeypatch, mock_questionary_init
+):
     """Test that provider list shows configured status"""
     monkeypatch.chdir(tmp_path)
-
-    # Mock questionary
-    original_text = questionary.text
-
-    def mock_text(message, **kwargs):
-        result = original_text(message, **kwargs)
-        if "name" in message.lower():
-            result.ask = lambda: "test-project"
-        elif "description" in message.lower():
-            result.ask = lambda: "Test description"
-        return result
-
-    monkeypatch.setattr(questionary, "text", mock_text)
 
     # Initialize project
     result = runner.invoke(app, ["init"])

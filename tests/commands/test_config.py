@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-import questionary
 import yaml
 from typer.testing import CliRunner
 
@@ -11,22 +10,9 @@ from qf.cli import app
 runner = CliRunner()
 
 
-def test_config_list_in_project(tmp_path, monkeypatch):
+def test_config_list_in_project(tmp_path, monkeypatch, mock_questionary_init):
     """Test listing config in a project"""
     monkeypatch.chdir(tmp_path)
-
-    # Mock questionary
-    original_text = questionary.text
-
-    def mock_text(message, **kwargs):
-        result = original_text(message, **kwargs)
-        if "name" in message.lower():
-            result.ask = lambda: "test-project"
-        elif "description" in message.lower():
-            result.ask = lambda: "Test description"
-        return result
-
-    monkeypatch.setattr(questionary, "text", mock_text)
 
     # Initialize project
     result = runner.invoke(app, ["init"])
@@ -48,22 +34,9 @@ def test_config_list_without_project(tmp_path, monkeypatch):
     assert "No project found" in result.stdout
 
 
-def test_config_get_existing_key(tmp_path, monkeypatch):
+def test_config_get_existing_key(tmp_path, monkeypatch, mock_questionary_init):
     """Test getting an existing config key"""
     monkeypatch.chdir(tmp_path)
-
-    # Mock questionary
-    original_text = questionary.text
-
-    def mock_text(message, **kwargs):
-        result = original_text(message, **kwargs)
-        if "name" in message.lower():
-            result.ask = lambda: "test-project"
-        elif "description" in message.lower():
-            result.ask = lambda: "Test description"
-        return result
-
-    monkeypatch.setattr(questionary, "text", mock_text)
 
     # Initialize project
     result = runner.invoke(app, ["init"])
@@ -75,22 +48,9 @@ def test_config_get_existing_key(tmp_path, monkeypatch):
     assert "ui.color" in result.stdout
 
 
-def test_config_get_nonexistent_key(tmp_path, monkeypatch):
+def test_config_get_nonexistent_key(tmp_path, monkeypatch, mock_questionary_init):
     """Test getting a nonexistent config key"""
     monkeypatch.chdir(tmp_path)
-
-    # Mock questionary
-    original_text = questionary.text
-
-    def mock_text(message, **kwargs):
-        result = original_text(message, **kwargs)
-        if "name" in message.lower():
-            result.ask = lambda: "test-project"
-        elif "description" in message.lower():
-            result.ask = lambda: "Test description"
-        return result
-
-    monkeypatch.setattr(questionary, "text", mock_text)
 
     # Initialize project
     result = runner.invoke(app, ["init"])
@@ -102,22 +62,9 @@ def test_config_get_nonexistent_key(tmp_path, monkeypatch):
     assert "not found" in result.stdout
 
 
-def test_config_set_new_key(tmp_path, monkeypatch):
+def test_config_set_new_key(tmp_path, monkeypatch, mock_questionary_init):
     """Test setting a new config key"""
     monkeypatch.chdir(tmp_path)
-
-    # Mock questionary
-    original_text = questionary.text
-
-    def mock_text(message, **kwargs):
-        result = original_text(message, **kwargs)
-        if "name" in message.lower():
-            result.ask = lambda: "test-project"
-        elif "description" in message.lower():
-            result.ask = lambda: "Test description"
-        return result
-
-    monkeypatch.setattr(questionary, "text", mock_text)
 
     # Initialize project
     result = runner.invoke(app, ["init"])
@@ -137,22 +84,9 @@ def test_config_set_new_key(tmp_path, monkeypatch):
     assert config["providers"]["text"]["openai"]["model"] == "gpt-4o"
 
 
-def test_config_set_boolean_value(tmp_path, monkeypatch):
+def test_config_set_boolean_value(tmp_path, monkeypatch, mock_questionary_init):
     """Test setting a boolean config value"""
     monkeypatch.chdir(tmp_path)
-
-    # Mock questionary
-    original_text = questionary.text
-
-    def mock_text(message, **kwargs):
-        result = original_text(message, **kwargs)
-        if "name" in message.lower():
-            result.ask = lambda: "test-project"
-        elif "description" in message.lower():
-            result.ask = lambda: "Test description"
-        return result
-
-    monkeypatch.setattr(questionary, "text", mock_text)
 
     # Initialize project
     result = runner.invoke(app, ["init"])
@@ -171,22 +105,9 @@ def test_config_set_boolean_value(tmp_path, monkeypatch):
     assert config["ui"]["color"] is False
 
 
-def test_config_masks_sensitive_values(tmp_path, monkeypatch):
+def test_config_masks_sensitive_values(tmp_path, monkeypatch, mock_questionary_init):
     """Test that sensitive values are masked"""
     monkeypatch.chdir(tmp_path)
-
-    # Mock questionary
-    original_text = questionary.text
-
-    def mock_text(message, **kwargs):
-        result = original_text(message, **kwargs)
-        if "name" in message.lower():
-            result.ask = lambda: "test-project"
-        elif "description" in message.lower():
-            result.ask = lambda: "Test description"
-        return result
-
-    monkeypatch.setattr(questionary, "text", mock_text)
 
     # Initialize project
     result = runner.invoke(app, ["init"])
@@ -201,6 +122,6 @@ def test_config_masks_sensitive_values(tmp_path, monkeypatch):
     # List config and verify masking
     result = runner.invoke(app, ["config", "list"])
     assert result.exit_code == 0
-    assert "sk-1" in result.stdout  # Shows first 4 chars
+    assert "sk" in result.stdout  # Shows first 2 chars
     assert "********" in result.stdout  # Rest is masked
     assert "1234567890abcdef" not in result.stdout  # Full key not shown

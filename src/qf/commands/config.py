@@ -1,7 +1,7 @@
 """Configuration management commands"""
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import typer
 import yaml
@@ -70,8 +70,8 @@ def is_sensitive(key: str) -> bool:
 def mask_value(value: Any, key: str) -> str:
     """Mask sensitive values"""
     if is_sensitive(key):
-        if isinstance(value, str) and len(value) > 4:
-            return f"{value[:4]}{'*' * 8}"
+        if isinstance(value, str) and len(value) > 2:
+            return f"{value[:2]}{'*' * 8}"
         return "********"
     return str(value)
 
@@ -110,16 +110,31 @@ def set_nested_value(config: dict[str, Any], key_path: str, value: str) -> None:
     # Set the final value
     final_key = keys[-1]
 
-    # Try to parse value as boolean or keep as string
+    # Try to parse value as boolean, int, float, or keep as string
     if value.lower() in ("true", "false"):
         current[final_key] = value.lower() == "true"
     else:
+        # Try to parse as integer
+        try:
+            current[final_key] = int(value)
+            return
+        except ValueError:
+            pass
+
+        # Try to parse as float
+        try:
+            current[final_key] = float(value)
+            return
+        except ValueError:
+            pass
+
+        # Keep as string
         current[final_key] = value
 
 
 def print_config_tree(
     config: dict[str, Any],
-    tree: Optional[Tree] = None,
+    tree: Tree | None = None,
     parent_key: str = "",
 ) -> Tree:
     """Recursively print config as a tree"""
@@ -200,6 +215,7 @@ def set_config(
         console.print(f"\n{msg} = {value}\n")
     except typer.Exit:
         raise
-    except Exception as e:
+    except (OSError, PermissionError, yaml.YAMLError) as e:
+        # File I/O errors or YAML serialization errors
         console.print(f"[red]Error setting configuration: {e}[/red]")
         raise typer.Exit(1)

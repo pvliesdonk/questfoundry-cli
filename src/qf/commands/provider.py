@@ -51,6 +51,32 @@ def get_default_provider(provider_type: str, config: dict[str, Any]) -> str | No
     return type_config.get("default") if isinstance(type_config, dict) else None
 
 
+def add_providers_to_table(
+    table: Table,
+    provider_type: str,
+    config: dict[str, Any],
+    default_provider: str | None,
+) -> None:
+    """Add providers of a specific type to the table"""
+    for provider_id, info in KNOWN_PROVIDERS.items():
+        if info["type"] == provider_type:
+            status = get_provider_status(provider_id, config)
+            is_default = "✓" if provider_id == default_provider else ""
+
+            # Color status
+            if status == "configured":
+                status_display = "[green]✓ configured[/green]"
+            else:
+                status_display = "[dim]not configured[/dim]"
+
+            table.add_row(
+                info["name"],
+                provider_type,
+                status_display,
+                is_default,
+            )
+
+
 @app.command(name="list")
 def list_providers() -> None:
     """List available AI providers"""
@@ -77,43 +103,9 @@ def list_providers() -> None:
     table.add_column("Status", style="white")
     table.add_column("Default", style="green")
 
-    # Add text providers
-    for provider_id, info in KNOWN_PROVIDERS.items():
-        if info["type"] == "text":
-            status = get_provider_status(provider_id, config)
-            is_default = "✓" if provider_id == default_text else ""
-
-            # Color status
-            if status == "configured":
-                status_display = "[green]✓ configured[/green]"
-            else:
-                status_display = "[dim]not configured[/dim]"
-
-            table.add_row(
-                info["name"],
-                "text",
-                status_display,
-                is_default,
-            )
-
-    # Add image providers
-    for provider_id, info in KNOWN_PROVIDERS.items():
-        if info["type"] == "image":
-            status = get_provider_status(provider_id, config)
-            is_default = "✓" if provider_id == default_image else ""
-
-            # Color status
-            if status == "configured":
-                status_display = "[green]✓ configured[/green]"
-            else:
-                status_display = "[dim]not configured[/dim]"
-
-            table.add_row(
-                info["name"],
-                "image",
-                status_display,
-                is_default,
-            )
+    # Add text and image providers
+    add_providers_to_table(table, "text", config, default_text)
+    add_providers_to_table(table, "image", config, default_image)
 
     console.print()
     console.print(table)
@@ -124,7 +116,7 @@ def list_providers() -> None:
     )
     tip_msg = (
         "[cyan]Tip:[/cyan] Use [green]qf config set "
-        "provider.text.<provider>.api_key <key>[/green] "
+        "providers.text.<provider>.api_key <key>[/green] "
         "to configure a provider\n"
     )
     console.print(tip_msg)
