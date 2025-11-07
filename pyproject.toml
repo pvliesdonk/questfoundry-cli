@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling", "versioningit"]
+build-backend = "hatchling.build"
+
+[project]
+name = "questfoundry-cli"
+dynamic = ["version"]
+description = "Command-line interface for QuestFoundry"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [{name = "Peter Liesdonk", email = "peter@liesdonk.nl"}]
+
+dependencies = [
+    "questfoundry-py @ git+https://github.com/pvliesdonk/questfoundry-py",
+    "typer[all]>=0.9.0",
+    "rich>=13.0.0",
+    "questionary>=2.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0",
+    "pre-commit>=3.0",
+]
+
+[project.scripts]
+qf = "qf.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/pvliesdonk/questfoundry-cli"
+Documentation = "https://github.com/pvliesdonk/questfoundry-spec"
+Specification = "https://github.com/pvliesdonk/questfoundry-spec"
+Repository = "https://github.com/pvliesdonk/questfoundry-cli"
+
+[tool.hatch.version]
+source = "versioningit"
+
+[tool.versioningit]
+default-version = "0.0.0"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/qf"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+exclude = ["spec"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
