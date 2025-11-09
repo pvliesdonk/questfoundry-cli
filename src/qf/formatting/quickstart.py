@@ -17,7 +17,7 @@ def display_quickstart_header(project_name: str) -> None:
     console.print()
     console.print(
         Panel(
-            f"[bold cyan]QuestFoundry Quickstart[/bold cyan]",
+            "[bold cyan]QuestFoundry Quickstart[/bold cyan]",
             title=f"[bold]{project_name}[/bold]",
             border_style="cyan",
         )
@@ -188,8 +188,8 @@ def display_resume_checkpoint(loops_completed: list[str], last_loop: str) -> Non
     console.print()
     console.print(
         Panel(
-            f"[cyan]Resuming Quickstart[/cyan]\n\n"
-            f"[cyan]Previously Completed:[/cyan]\n"
+            "[cyan]Resuming Quickstart[/cyan]\n\n"
+            "[cyan]Previously Completed:[/cyan]\n"
             + "\n".join(f"  [green]✓[/green] {loop}" for loop in loops_completed)
             + f"\n\n[cyan]Last Loop:[/cyan] {last_loop}",
             border_style="cyan",

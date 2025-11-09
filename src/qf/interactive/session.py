@@ -3,7 +3,7 @@
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from rich.console import Console
 
@@ -22,7 +22,6 @@ class QuickstartSession:
         completed_loops: List of completed loop names
         current_loop: Currently executing loop name
         interactive_mode: Whether interactive mode is enabled
-        checkpoint_data: Data saved at checkpoints for resumption
     """
 
     def __init__(self) -> None:
@@ -37,7 +36,6 @@ class QuickstartSession:
         self.current_loop: Optional[str] = None
         self.interactive_mode: bool = False
         self.start_time: datetime = datetime.now()
-        self.checkpoint_data: dict = {}
 
     def create_project(self, name: str, premise: str, tone: str, length: str) -> bool:
         """Create a new QuestFoundry project.
@@ -170,7 +168,7 @@ class QuickstartSession:
         checkpoint_file = Path(".questfoundry") / ".quickstart_checkpoint.json"
         return checkpoint_file.exists()
 
-    def get_session_status(self) -> dict:
+    def get_session_status(self) -> dict[str, Any]:
         """Get current session status.
 
         Returns:

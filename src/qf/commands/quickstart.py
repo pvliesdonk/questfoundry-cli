@@ -1,7 +1,5 @@
 """Quickstart workflow command for rapid project setup."""
 
-from pathlib import Path
-
 import typer
 from rich.console import Console
 from rich.panel import Panel

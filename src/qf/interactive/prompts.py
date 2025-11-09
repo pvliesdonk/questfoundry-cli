@@ -3,6 +3,9 @@
 from typing import Optional
 
 import questionary
+from rich.console import Console
+
+console = Console()
 
 
 def ask_premise() -> str:
@@ -85,16 +88,16 @@ def confirm_setup(premise: str, tone: str, length: str, name: str) -> bool:
     Returns:
         True if user confirms, False otherwise
     """
-    console_text = (
-        f"\n[cyan]Project Setup[/cyan]\n"
-        f"[cyan]Name:[/cyan] {name}\n"
-        f"[cyan]Premise:[/cyan] {premise}\n"
-        f"[cyan]Tone:[/cyan] {tone}\n"
-        f"[cyan]Length:[/cyan] {length}\n"
-    )
+    # Display formatted setup summary
+    console.print()
+    console.print("[cyan]Project Setup[/cyan]")
+    console.print(f"[cyan]Name:[/cyan] {name}")
+    console.print(f"[cyan]Premise:[/cyan] {premise}")
+    console.print(f"[cyan]Tone:[/cyan] {tone}")
+    console.print(f"[cyan]Length:[/cyan] {length}")
 
     return questionary.confirm(
-        f"{console_text}\nCreate project?",
+        "Create project?",
         auto_enter=True,
         default=True,
     ).ask() or False
