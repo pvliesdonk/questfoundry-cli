@@ -1,7 +1,6 @@
 """Loop execution summary formatting"""
 
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 from rich.console import Console
@@ -85,7 +84,9 @@ def display_loop_summary(
     header_text.append(f"\nCompleted in {format_duration(duration)}", style="green")
 
     console.print()
-    console.print(Panel(header_text, title="Loop Execution Summary", border_style="cyan"))
+    console.print(
+        Panel(header_text, title="Loop Execution Summary", border_style="cyan")
+    )
 
     # TU information (if created)
     if tu_id:
@@ -93,7 +94,8 @@ def display_loop_summary(
         tu_panel = Text()
         tu_panel.append("Transaction Unit: ", style="bold")
         tu_panel.append(tu_id, style="cyan")
-        tu_panel.append(f"\nCreated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", style="dim")
+        created_time = datetime.now().strftime('%Y-%m-%d %H:%M')
+        tu_panel.append(f"\nCreated: {created_time}", style="dim")
         console.print(Panel(tu_panel, title="TU Brief", border_style="cyan"))
 
     # artifacts table
@@ -140,7 +142,9 @@ def display_loop_summary(
     console.print()
 
 
-def display_quick_summary(loop_name: str, duration: float, artifacts_count: int) -> None:
+def display_quick_summary(
+    loop_name: str, duration: float, artifacts_count: int
+) -> None:
     """
     Display a quick one-line summary.
 

@@ -1,6 +1,5 @@
 """Tests for run command"""
 
-import json
 
 from typer.testing import CliRunner
 

@@ -9,7 +9,6 @@ from rich.progress import (
     BarColumn,
     Progress,
     SpinnerColumn,
-    TaskID,
     TextColumn,
     TimeElapsedColumn,
 )
@@ -18,7 +17,9 @@ console = Console()
 
 
 @contextmanager
-def loop_progress(loop_name: str, description: str | None = None):
+def loop_progress(
+    loop_name: str, description: str | None = None
+) -> Any:  # Generator[Progress, None, None]
     """
     Context manager for displaying loop execution progress.
 
@@ -51,7 +52,7 @@ def loop_progress(loop_name: str, description: str | None = None):
 
 
 @contextmanager
-def step_progress(steps: list[str]):
+def step_progress(steps: list[str]) -> Any:
     """
     Context manager for multi-step progress with defined steps.
 
@@ -78,7 +79,7 @@ def step_progress(steps: list[str]):
     ) as progress:
         task = progress.add_task("Processing...", total=len(steps))
 
-        def advance(description: str | None = None):
+        def advance(description: str | None = None) -> None:
             if description:
                 progress.update(task, description=description)
             progress.advance(task)
@@ -89,7 +90,7 @@ def step_progress(steps: list[str]):
             progress.update(task, completed=True)
 
 
-def show_spinner(message: str):
+def show_spinner(message: str) -> Progress:
     """
     Show a simple spinner with a message.
 
@@ -115,22 +116,28 @@ class ActivityTracker:
         self.activities: list[dict[str, Any]] = []
         self.current_activity: str | None = None
 
-    def start_activity(self, activity: str):
+    def start_activity(self, activity: str) -> None:
         """Start tracking a new activity"""
         self.current_activity = activity
         self.activities.append(
-            {"activity": activity, "start": time.time(), "end": None, "status": "running"}
+            {
+                "activity": activity,
+                "start": time.time(),
+                "end": None,
+                "status": "running",
+            }
         )
         console.print(f"[cyan]→ {activity}[/cyan]")
 
-    def complete_activity(self, status: str = "completed"):
+    def complete_activity(self, status: str = "completed") -> None:
         """Mark current activity as complete"""
         if self.activities:
             self.activities[-1]["end"] = time.time()
             self.activities[-1]["status"] = status
             elapsed = self.activities[-1]["end"] - self.activities[-1]["start"]
             if status == "completed":
-                console.print(f"[green]✓ {self.current_activity} ({elapsed:.1f}s)[/green]")
+                status_msg = f"✓ {self.current_activity} ({elapsed:.1f}s)"
+                console.print(f"[green]{status_msg}[/green]")
             else:
                 console.print(f"[yellow]⚠ {self.current_activity} ({status})[/yellow]")
         self.current_activity = None
