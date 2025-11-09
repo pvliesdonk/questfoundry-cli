@@ -1,6 +1,6 @@
 """Tests for run command"""
 
-
+import pytest
 from typer.testing import CliRunner
 
 from qf.cli import app
@@ -12,7 +12,7 @@ def test_run_without_project(tmp_path, monkeypatch):
     """Test running a loop without a project"""
     monkeypatch.chdir(tmp_path)
 
-    result = runner.invoke(app, ["run", "run", "hook-harvest"])
+    result = runner.invoke(app, ["run", "hook-harvest"])
 
     assert result.exit_code == 1
     assert "No project found" in result.stdout
@@ -27,7 +27,7 @@ def test_run_with_valid_loop(tmp_path, monkeypatch, mock_questionary_init):
     assert result.exit_code == 0
 
     # run a loop
-    result = runner.invoke(app, ["run", "run", "hook-harvest"])
+    result = runner.invoke(app, ["run", "hook-harvest"])
 
     assert result.exit_code == 0
     assert "Hook Harvest" in result.stdout
@@ -44,7 +44,7 @@ def test_run_with_invalid_loop(tmp_path, monkeypatch, mock_questionary_init):
     assert result.exit_code == 0
 
     # try invalid loop
-    result = runner.invoke(app, ["run", "run", "invalid-loop"])
+    result = runner.invoke(app, ["run", "invalid-loop"])
 
     assert result.exit_code == 1
     assert "Unknown loop" in result.stdout
@@ -60,7 +60,7 @@ def test_run_with_display_name(tmp_path, monkeypatch, mock_questionary_init):
     assert result.exit_code == 0
 
     # run using display name
-    result = runner.invoke(app, ["run", "run", "Story Spark"])
+    result = runner.invoke(app, ["run", "Story Spark"])
 
     assert result.exit_code == 0
     assert "Story Spark" in result.stdout
@@ -76,7 +76,7 @@ def test_run_shows_progress(tmp_path, monkeypatch, mock_questionary_init):
     assert result.exit_code == 0
 
     # run loop
-    result = runner.invoke(app, ["run", "run", "lore-deepening"])
+    result = runner.invoke(app, ["run", "lore-deepening"])
 
     assert result.exit_code == 0
     # check for activity indicators
@@ -93,7 +93,7 @@ def test_run_shows_summary(tmp_path, monkeypatch, mock_questionary_init):
     assert result.exit_code == 0
 
     # run loop
-    result = runner.invoke(app, ["run", "run", "codex-expansion"])
+    result = runner.invoke(app, ["run", "codex-expansion"])
 
     assert result.exit_code == 0
     assert "Summary" in result.stdout
@@ -110,7 +110,7 @@ def test_run_suggests_next_action(tmp_path, monkeypatch, mock_questionary_init):
     assert result.exit_code == 0
 
     # run hook-harvest (should suggest lore-deepening next)
-    result = runner.invoke(app, ["run", "run", "hook-harvest"])
+    result = runner.invoke(app, ["run", "hook-harvest"])
 
     assert result.exit_code == 0
     assert "Next Action" in result.stdout or "next" in result.stdout.lower()
@@ -125,85 +125,50 @@ def test_run_interactive_flag(tmp_path, monkeypatch, mock_questionary_init):
     assert result.exit_code == 0
 
     # run with interactive flag
-    result = runner.invoke(app, ["run", "run", "story-spark", "--interactive"])
+    result = runner.invoke(app, ["run", "story-spark", "--interactive"])
 
     assert result.exit_code == 0
     assert "Interactive mode" in result.stdout or "future" in result.stdout
 
 
-def test_run_all_discovery_loops(tmp_path, monkeypatch, mock_questionary_init):
-    """Test all discovery category loops execute"""
+@pytest.mark.parametrize(
+    "category,loops",
+    [
+        ("discovery", ["story-spark", "hook-harvest", "lore-deepening"]),
+        ("refinement", ["codex-expansion", "style-tuneup"]),
+        ("asset", ["art-touchup", "audio-pass", "translation-pass"]),
+        (
+            "export",
+            [
+                "binding-run",
+                "narration-dry-run",
+                "gatecheck",
+                "post-mortem",
+                "archive-snapshot",
+            ],
+        ),
+    ],
+)
+def test_run_all_loops_by_category(
+    category, loops, tmp_path, monkeypatch, mock_questionary_init
+):
+    """Test all loops in a category execute successfully"""
     monkeypatch.chdir(tmp_path)
 
     # initialize project
     result = runner.invoke(app, ["init"])
     assert result.exit_code == 0
 
-    discovery_loops = ["story-spark", "hook-harvest", "lore-deepening"]
-
-    for loop in discovery_loops:
-        result = runner.invoke(app, ["run", "run", loop])
-        assert result.exit_code == 0
-        assert "Summary" in result.stdout
-
-
-def test_run_all_refinement_loops(tmp_path, monkeypatch, mock_questionary_init):
-    """Test all refinement category loops execute"""
-    monkeypatch.chdir(tmp_path)
-
-    # initialize project
-    result = runner.invoke(app, ["init"])
-    assert result.exit_code == 0
-
-    refinement_loops = ["codex-expansion", "style-tuneup"]
-
-    for loop in refinement_loops:
-        result = runner.invoke(app, ["run", "run", loop])
-        assert result.exit_code == 0
-        assert "Summary" in result.stdout
-
-
-def test_run_all_asset_loops(tmp_path, monkeypatch, mock_questionary_init):
-    """Test all asset category loops execute"""
-    monkeypatch.chdir(tmp_path)
-
-    # initialize project
-    result = runner.invoke(app, ["init"])
-    assert result.exit_code == 0
-
-    asset_loops = ["art-touchup", "audio-pass", "translation-pass"]
-
-    for loop in asset_loops:
-        result = runner.invoke(app, ["run", "run", loop])
-        assert result.exit_code == 0
-        assert "Summary" in result.stdout
-
-
-def test_run_all_export_loops(tmp_path, monkeypatch, mock_questionary_init):
-    """Test all export category loops execute"""
-    monkeypatch.chdir(tmp_path)
-
-    # initialize project
-    result = runner.invoke(app, ["init"])
-    assert result.exit_code == 0
-
-    export_loops = [
-        "binding-run",
-        "narration-dry-run",
-        "gatecheck",
-        "post-mortem",
-        "archive-snapshot",
-    ]
-
-    for loop in export_loops:
-        result = runner.invoke(app, ["run", "run", loop])
+    # test each loop in the category
+    for loop in loops:
+        result = runner.invoke(app, ["run", loop])
         assert result.exit_code == 0
         assert "Summary" in result.stdout
 
 
 def test_run_help(tmp_path):
     """Test run command help text"""
-    result = runner.invoke(app, ["run", "run", "--help"])
+    result = runner.invoke(app, ["run", "--help"])
 
     assert result.exit_code == 0
     assert "Execute a loop" in result.stdout

@@ -4,101 +4,27 @@ import time
 from pathlib import Path
 
 import typer
+import yaml
 from rich.console import Console
 from rich.panel import Panel
 
 from qf.formatting.loop_summary import display_loop_summary, suggest_next_loop
 from qf.formatting.progress import ActivityTracker
-from qf.utils import find_project_file
+from qf.utils import WORKSPACE_DIR, find_project_file
 
-app = typer.Typer(help="Execute loops")
 console = Console()
 
+
+def _load_loops() -> dict[str, dict[str, str]]:
+    """Load loop definitions from YAML configuration file."""
+    loops_file = Path(__file__).parent.parent / "data" / "loops.yml"
+    with open(loops_file, "r") as f:
+        loops = yaml.safe_load(f)
+        return loops if loops is not None else {}
+
+
 # All 13 loops from Layer 2 spec (02-dictionary/loop_names.md)
-LOOPS = {
-    # Discovery loops
-    "story-spark": {
-        "display_name": "Story Spark",
-        "abbrev": "SS",
-        "category": "Discovery",
-        "description": "Generate initial story concepts and hooks",
-    },
-    "hook-harvest": {
-        "display_name": "Hook Harvest",
-        "abbrev": "HH",
-        "category": "Discovery",
-        "description": "Generate and collect story hooks",
-    },
-    "lore-deepening": {
-        "display_name": "Lore Deepening",
-        "abbrev": "LD",
-        "category": "Discovery",
-        "description": "Expand and deepen world lore",
-    },
-    # Refinement loops
-    "codex-expansion": {
-        "display_name": "Codex Expansion",
-        "abbrev": "CE",
-        "category": "Refinement",
-        "description": "Expand codex entries with detail",
-    },
-    "style-tuneup": {
-        "display_name": "Style Tune-up",
-        "abbrev": "ST",
-        "category": "Refinement",
-        "description": "Polish and align content style",
-    },
-    # Asset loops
-    "art-touchup": {
-        "display_name": "Art Touch-up",
-        "abbrev": "AT",
-        "category": "Asset",
-        "description": "Generate and refine artwork",
-    },
-    "audio-pass": {
-        "display_name": "Audio Pass",
-        "abbrev": "AP",
-        "category": "Asset",
-        "description": "Generate audio assets",
-    },
-    "translation-pass": {
-        "display_name": "Translation Pass",
-        "abbrev": "TP",
-        "category": "Asset",
-        "description": "Translate content to other languages",
-    },
-    # Export loops
-    "binding-run": {
-        "display_name": "Binding Run",
-        "abbrev": "BR",
-        "category": "Export",
-        "description": "Generate player-facing views",
-    },
-    "narration-dry-run": {
-        "display_name": "Narration Dry-Run",
-        "abbrev": "NDR",
-        "category": "Export",
-        "description": "Test narration flow",
-    },
-    "gatecheck": {
-        "display_name": "Gatecheck",
-        "abbrev": "GC",
-        "category": "Export",
-        "description": "Run quality checks",
-    },
-    "post-mortem": {
-        "display_name": "Post-Mortem",
-        "abbrev": "PM",
-        "category": "Export",
-        "description": "Analyze and document project outcomes",
-    },
-    "archive-snapshot": {
-        "display_name": "Archive Snapshot",
-        "abbrev": "AS",
-        "category": "Export",
-        "description": "Create project snapshot for archiving",
-    },
-}
+LOOPS = _load_loops()
 
 
 def validate_loop_name(loop_name: str) -> str:
@@ -123,7 +49,8 @@ def validate_loop_name(loop_name: str) -> str:
 
     # check if it matches any display name (case-insensitive)
     for loop_id, loop_info in LOOPS.items():
-        if loop_info["display_name"].lower() == loop_name.lower():
+        display_name = str(loop_info["display_name"])
+        if display_name.lower() == loop_name.lower():
             return loop_id
 
     # invalid loop name
@@ -136,7 +63,6 @@ def validate_loop_name(loop_name: str) -> str:
     raise typer.Exit(1)
 
 
-@app.command()
 def run(
     loop_name: str = typer.Argument(..., help="Loop name to execute"),
     interactive: bool = typer.Option(
@@ -158,7 +84,7 @@ def run(
     loop_info = LOOPS[loop_id]
 
     # check workspace exists
-    workspace = Path(".questfoundry")
+    workspace = Path(WORKSPACE_DIR)
     if not workspace.exists():
         console.print("[red]Error: Workspace not found[/red]")
         raise typer.Exit(1)

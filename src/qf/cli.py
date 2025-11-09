@@ -24,7 +24,6 @@ app.add_typer(artifact.app, name="artifact", help="Work with artifacts")
 app.add_typer(config.app, name="config", help="Manage project configuration")
 app.add_typer(provider.app, name="provider", help="Manage AI providers")
 app.add_typer(check.app, name="check", help="Run quality checks")
-app.add_typer(run.app, name="run", help="Execute loops")
 
 # Add project commands
 app.command(name="init", help="Initialize a new project")(init_command)
@@ -32,6 +31,7 @@ app.command(name="status", help="Show project status")(status_command)
 app.command(name="list", help="List artifacts")(list_artifacts)
 app.command(name="show", help="Show artifact details")(show_artifact)
 app.command(name="history", help="Show project history")(history_command)
+app.command(name="run", help="Execute a loop")(run.run)
 
 
 @app.command()

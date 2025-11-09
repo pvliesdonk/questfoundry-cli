@@ -1,6 +1,7 @@
 """Progress indicators for long-running operations"""
 
 import time
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from typing import Any
 
@@ -9,6 +10,7 @@ from rich.progress import (
     BarColumn,
     Progress,
     SpinnerColumn,
+    TaskID,
     TextColumn,
     TimeElapsedColumn,
 )
@@ -19,7 +21,7 @@ console = Console()
 @contextmanager
 def loop_progress(
     loop_name: str, description: str | None = None
-) -> Any:  # Generator[Progress, None, None]
+) -> Generator[Progress, None, None]:
     """
     Context manager for displaying loop execution progress.
 
@@ -52,7 +54,9 @@ def loop_progress(
 
 
 @contextmanager
-def step_progress(steps: list[str]) -> Any:
+def step_progress(
+    steps: list[str],
+) -> Generator[tuple[Progress, TaskID, Callable[[str | None], None]], None, None]:
     """
     Context manager for multi-step progress with defined steps.
 
@@ -131,15 +135,18 @@ class ActivityTracker:
 
     def complete_activity(self, status: str = "completed") -> None:
         """Mark current activity as complete"""
-        if self.activities:
-            self.activities[-1]["end"] = time.time()
-            self.activities[-1]["status"] = status
-            elapsed = self.activities[-1]["end"] - self.activities[-1]["start"]
-            if status == "completed":
-                status_msg = f"✓ {self.current_activity} ({elapsed:.1f}s)"
-                console.print(f"[green]{status_msg}[/green]")
-            else:
-                console.print(f"[yellow]⚠ {self.current_activity} ({status})[/yellow]")
+        # Guard against calling complete_activity twice
+        if not self.activities or self.current_activity is None:
+            return
+
+        self.activities[-1]["end"] = time.time()
+        self.activities[-1]["status"] = status
+        elapsed = self.activities[-1]["end"] - self.activities[-1]["start"]
+        if status == "completed":
+            status_msg = f"✓ {self.current_activity} ({elapsed:.1f}s)"
+            console.print(f"[green]{status_msg}[/green]")
+        else:
+            console.print(f"[yellow]⚠ {self.current_activity} ({status})[/yellow]")
         self.current_activity = None
 
     def get_duration(self) -> float:

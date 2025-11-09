@@ -64,6 +64,7 @@ def display_loop_summary(
     artifacts: list[dict[str, Any]] | None = None,
     activities: list[dict[str, Any]] | None = None,
     next_action: str | None = None,
+    created_at: datetime | None = None,
 ) -> None:
     """
     Display comprehensive loop execution summary.
@@ -76,6 +77,7 @@ def display_loop_summary(
         artifacts: List of artifacts created/modified
         activities: List of activities performed
         next_action: Suggested next step
+        created_at: Timestamp when the loop was created (defaults to now)
     """
     # header panel
     header_text = Text()
@@ -94,7 +96,8 @@ def display_loop_summary(
         tu_panel = Text()
         tu_panel.append("Transaction Unit: ", style="bold")
         tu_panel.append(tu_id, style="cyan")
-        created_time = datetime.now().strftime('%Y-%m-%d %H:%M')
+        timestamp = created_at if created_at else datetime.now()
+        created_time = timestamp.strftime('%Y-%m-%d %H:%M')
         tu_panel.append(f"\nCreated: {created_time}", style="dim")
         console.print(Panel(tu_panel, title="TU Brief", border_style="cyan"))
 
@@ -167,25 +170,33 @@ def suggest_next_loop(current_loop: str) -> str | None:
         current_loop: Current loop name (kebab-case)
 
     Returns:
-        Suggested next loop display name, or None
+        Suggested next loop command, or None
     """
-    # common workflow progressions
-    sequences = {
-        "story-spark": "Hook Harvest",
-        "hook-harvest": "Lore Deepening",
-        "lore-deepening": "Codex Expansion",
-        "codex-expansion": "Style Tune-up",
-        "style-tuneup": "Art Touch-up or Audio Pass",
-        "art-touchup": "Binding Run",
-        "audio-pass": "Binding Run",
-        "translation-pass": "Binding Run",
-        "binding-run": "Narration Dry-Run",
-        "narration-dry-run": "Gatecheck",
-        "gatecheck": "Post-Mortem",
-        "post-mortem": "Archive Snapshot",
+    # common workflow progressions (using kebab-case)
+    # values can be either a string or a list of strings for multiple options
+    sequences: dict[str, str | list[str]] = {
+        "story-spark": "hook-harvest",
+        "hook-harvest": "lore-deepening",
+        "lore-deepening": "codex-expansion",
+        "codex-expansion": "style-tuneup",
+        "style-tuneup": ["art-touchup", "audio-pass"],
+        "art-touchup": "binding-run",
+        "audio-pass": "binding-run",
+        "translation-pass": "binding-run",
+        "binding-run": "narration-dry-run",
+        "narration-dry-run": "gatecheck",
+        "gatecheck": "post-mortem",
+        "post-mortem": "archive-snapshot",
     }
 
     next_loop = sequences.get(current_loop)
     if next_loop:
-        return f"Run [green]qf run {next_loop.lower().replace(' ', '-')}[/green]"
+        if isinstance(next_loop, list):
+            # Multiple options
+            formatted = [f"[green]qf run {loop}[/green]" for loop in next_loop]
+            options = " or ".join(formatted)
+            return f"Run {options}"
+        else:
+            # Single option
+            return f"Run [green]qf run {next_loop}[/green]"
     return None
