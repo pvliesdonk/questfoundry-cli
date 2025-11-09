@@ -15,6 +15,8 @@ Epic (Branch)
 
 ### 1. Starting an Epic
 
+**Every epic must have its own dedicated branch.**
+
 **Create branch:**
 
 ```bash
@@ -25,6 +27,8 @@ Example:
 ```bash
 git checkout -b claude/epic-1-project-foundation-011CUsGfkDUjdP1rxbTZSynV
 ```
+
+**Note**: Do NOT reuse branches across epics. Each epic gets a new branch to maintain clean history and clear separation of concerns.
 
 ### 2. Implementing Features
 
@@ -90,26 +94,80 @@ git push -u origin claude/epic-<number>-<name>-<session-id>
 
 Before marking an epic as complete, it must meet the following criteria:
 
-**Code Quality:**
-- ✅ All tests pass (`uv run pytest`)
-- ✅ Type checking passes (`uv run mypy src/`)
-- ✅ Linting passes (`uv run ruff check .`)
-- ✅ Code formatted (`uv run ruff format .`)
+**CI/CD Green ✅**
+- ✅ All tests pass: `uv run pytest` (no failures)
+- ✅ Type checking passes: `uv run mypy src/` (no errors)
+- ✅ Linting passes: `uv run ruff check .` (no violations)
+- ✅ Code formatted: `uv run ruff format .`
 
-**Review & Documentation:**
-- ✅ At least one round of reviews completed
-- ✅ All review feedback addressed
+**Review & Feedback:**
+- ✅ At least one round of reviews completed (PR reviewed by maintainer or team)
+- ✅ All review feedback addressed and resolved
+- ✅ Any requested changes implemented
+- ✅ Follow-up conversations documented
+
+**Code Quality:**
 - ✅ Documentation updated (if applicable)
+- ✅ Test coverage adequate (>80% for new code)
+- ✅ No technical debt introduced
 
 **Completeness:**
-- ✅ All features implemented
+- ✅ All features for the epic implemented
 - ✅ Commits follow conventional format
-- ✅ No outstanding issues
+- ✅ No outstanding issues or TODOs
+- ✅ PR text written (see below)
 
 **Branch Status:**
 - ✅ All changes committed
 - ✅ All changes pushed to remote branch
 - ✅ Working tree clean
+- ✅ Ready for merge to main
+
+### Writing PR Text
+
+**For each epic, create a PR text file** in `.claude/` directory:
+
+```
+.claude/pr-description-epic-<N>.md
+```
+
+**Template:**
+
+```markdown
+# Epic <N>: <Name> - Pull Request
+
+## Summary
+Brief overview of what was implemented.
+
+## Features Implemented
+- ✅ Feature 1
+- ✅ Feature 2
+- ✅ Feature 3
+
+## Architecture & Design
+Explain the design decisions and new/modified files.
+
+## Test Coverage
+List test scenarios covered.
+
+## Code Quality
+Report mypy, ruff, and pytest results.
+
+## Commits
+List all commits in the epic (can be copy-pasted from `git log`).
+
+## Definition of Done ✅
+- ✅ All tests passing
+- ✅ mypy passing
+- ✅ ruff passing
+- ✅ At least one round of reviews completed and feedback addressed
+```
+
+**Benefits:**
+- Clear communication of changes
+- Easy to review before merging
+- Historical record of what was done
+- Helps track progress and completion
 
 ### 6. Cleanup
 
@@ -130,6 +188,28 @@ Each commit should be:
 - ✅ **Typed**: Full type hints
 - ✅ **Documented**: Includes docstrings
 - ✅ **Conventional**: Follows commit format
+
+### Commit Strategy
+
+**Minimal Commits**: Preferably, one commit per feature. If a feature is complex and naturally decomposes, multiple commits are acceptable, but keep them minimal and logical.
+
+**Why minimal?**
+- Clean git history
+- Easier to review
+- Simpler to cherry-pick or revert if needed
+- Better for understanding code evolution
+
+**Examples:**
+
+✅ **Good**: `feat(formatting): add multi-iteration loop tracking system`
+- Creates 3 new modules + tests
+- One logical feature
+- One commit
+
+❌ **Avoid**:
+- Multiple commits for a single feature
+- WIP or work-in-progress commits
+- Commits that mix unrelated features
 
 ## Example Epic: Epic 1 - Project Foundation
 
@@ -170,9 +250,10 @@ git push -u origin claude/epic-1-project-foundation-<session-id>
 
 Track epic progress in:
 
-- `.claude/README.md` - Update current progress
-- Todo list - Use TodoWrite tool for granular tracking
-- Commit messages - Reference epic number
+- `.claude/README.md` - Update current progress and mark epic as complete
+- `.claude/pr-description-epic-<N>.md` - Write comprehensive PR text
+- Todo list - Use TodoWrite tool for granular task tracking during development
+- Commit messages - Reference epic number in conventional commits
 
 ## Example Epic Flow
 
