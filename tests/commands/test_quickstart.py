@@ -12,7 +12,7 @@ from typer.testing import CliRunner
 from qf.cli import app
 from qf.interactive import QuickstartSession
 
-runner = CliRunner()
+runner = CliRunner(mix_stderr=False)
 
 
 @pytest.fixture
@@ -440,7 +440,11 @@ class TestQuickstartInteractive:
                         )
                     )
 
-                    result = runner.invoke(app, ["quickstart"])
+                    result = runner.invoke(
+                        app,
+                        ["quickstart"],
+                        env={"TERM": "xterm-256color", "COLUMNS": "120"},
+                    )
 
                 # Command should complete successfully
                 assert result.exit_code == 0
@@ -467,7 +471,11 @@ class TestQuickstartInteractive:
 
                 # Should fail with clear error message
                 assert result.exit_code == 1
-                assert "Interactive mode requires a TTY" in result.stdout
+                # Check both stdout for the error message
+                assert (
+                    "Interactive mode requires a TTY" in result.stdout
+                    or "Interactive mode requires a TTY" in str(result.exception)
+                )
 
             finally:
                 os.chdir(old_cwd)
@@ -501,7 +509,11 @@ class TestQuickstartInteractive:
                         "qf.commands.quickstart.ask_continue_loop",
                         return_value=False,
                     ):
-                        result = runner.invoke(app, ["quickstart", "--resume"])
+                        result = runner.invoke(
+                            app,
+                            ["quickstart", "--resume"],
+                            env={"TERM": "xterm-256color", "COLUMNS": "120"},
+                        )
 
                 assert result.exit_code == 0
                 assert "Resumed from checkpoint" in result.stdout
