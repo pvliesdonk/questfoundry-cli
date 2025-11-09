@@ -7,6 +7,8 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
+from qf.formatting.loop_summary import display_loop_summary, suggest_next_loop
+from qf.formatting.progress import ActivityTracker
 from qf.utils import find_project_file
 
 app = typer.Typer(help="Execute loops")
@@ -168,7 +170,7 @@ def run(
             "in a future release.[/yellow]\n"
         )
 
-    # execute loop (placeholder - will integrate with Layer 6 Showrunner)
+    # execute loop with progress tracking
     console.print(
         Panel(
             f"[bold cyan]{loop_info['display_name']}[/bold cyan]\n"
@@ -179,11 +181,39 @@ def run(
     )
 
     console.print(
-        "\n[yellow]Note: Loop execution will integrate with questfoundry-py "
+        "\n[yellow]Note: Full loop execution will integrate with questfoundry-py "
         "Showrunner in a future release.[/yellow]"
     )
-    console.print("\n[dim]For now, this command validates loop configuration.[/dim]\n")
+    console.print("[dim]Demonstrating progress tracking and summary display...[/dim]\n")
 
-    # placeholder execution (will be replaced with actual showrunner call)
-    console.print("[green]✓ Loop configuration validated[/green]")
-    console.print(f"[green]✓ Workspace ready for {loop_info['display_name']}[/green]")
+    # placeholder execution with progress tracking
+    tracker = ActivityTracker(loop_info['display_name'])
+
+    # simulate loop activities
+    tracker.start_activity("Initializing loop context")
+    time.sleep(0.5)
+    tracker.complete_activity()
+
+    tracker.start_activity("Loading project configuration")
+    time.sleep(0.3)
+    tracker.complete_activity()
+
+    tracker.start_activity("Validating workspace")
+    time.sleep(0.2)
+    tracker.complete_activity()
+
+    tracker.start_activity(f"Executing {loop_info['display_name']}")
+    time.sleep(0.5)
+    tracker.complete_activity()
+
+    # display summary
+    next_action = suggest_next_loop(loop_id)
+    display_loop_summary(
+        loop_name=loop_info['display_name'],
+        loop_abbrev=loop_info['abbrev'],
+        duration=tracker.get_duration(),
+        tu_id=None,  # will be populated when integrated with Layer 6
+        artifacts=[],  # will be populated when integrated with Layer 6
+        activities=tracker.activities,
+        next_action=next_action,
+    )
