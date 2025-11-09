@@ -1,6 +1,7 @@
 """Tests for quickstart workflow command."""
 
 import json
+import re
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -12,6 +13,19 @@ from qf.interactive import QuickstartSession
 
 # Configure runner for testing with proper environment
 runner = CliRunner()
+
+
+def strip_ansi_codes(text: str) -> str:
+    """Remove ANSI escape codes from text.
+
+    Args:
+        text: Text potentially containing ANSI codes
+
+    Returns:
+        Text with ANSI codes removed
+    """
+    ansi_pattern = re.compile(r"\x1b\[[0-9;]*m")
+    return ansi_pattern.sub("", text)
 
 
 class TestQuickstartSession:
@@ -232,9 +246,10 @@ class TestQuickstartCommand:
                 result = runner.invoke(
                     app, ["quickstart", "--help"], env={"COLUMNS": "200"}
                 )
+                clean_output = strip_ansi_codes(result.stdout).lower()
                 assert result.exit_code == 0
-                assert "guided" in result.stdout.lower()
-                assert "interactive" in result.stdout.lower()
+                assert "guided" in clean_output
+                assert "interactive" in clean_output
 
             finally:
                 os.chdir(old_cwd)
@@ -245,32 +260,36 @@ class TestQuickstartCommand:
             app, ["quickstart", "--help"], env={"COLUMNS": "200"}
         )
 
+        clean_output = strip_ansi_codes(result.stdout).lower()
         assert result.exit_code == 0
-        assert "quickstart" in result.stdout.lower()
-        assert "guided" in result.stdout.lower()
-        assert "interactive" in result.stdout.lower()
-        assert "resume" in result.stdout.lower()
+        assert "quickstart" in clean_output
+        assert "guided" in clean_output
+        assert "interactive" in clean_output
+        assert "resume" in clean_output
 
     def test_quickstart_guided_flag(self) -> None:
         """Test that --guided flag is recognized."""
         result = runner.invoke(
             app, ["quickstart", "--help"], env={"COLUMNS": "200"}
         )
-        assert "--guided" in result.stdout
+        clean_output = strip_ansi_codes(result.stdout)
+        assert "--guided" in clean_output
 
     def test_quickstart_interactive_flag(self) -> None:
         """Test that --interactive flag is recognized."""
         result = runner.invoke(
             app, ["quickstart", "--help"], env={"COLUMNS": "200"}
         )
-        assert "--interactive" in result.stdout or "-i" in result.stdout
+        clean_output = strip_ansi_codes(result.stdout)
+        assert "--interactive" in clean_output or "-i" in clean_output
 
     def test_quickstart_resume_flag(self) -> None:
         """Test that --resume flag is recognized."""
         result = runner.invoke(
             app, ["quickstart", "--help"], env={"COLUMNS": "200"}
         )
-        assert "--resume" in result.stdout
+        clean_output = strip_ansi_codes(result.stdout)
+        assert "--resume" in clean_output
 
 
 class TestQuickstartIntegration:
