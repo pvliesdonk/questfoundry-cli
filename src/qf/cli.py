@@ -18,6 +18,7 @@ app = typer.Typer(
     name="qf",
     help="QuestFoundry command-line interface",
     no_args_is_help=True,
+    add_completion=True,
 )
 
 # Add command groups
