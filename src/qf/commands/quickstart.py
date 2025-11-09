@@ -206,6 +206,9 @@ def quickstart(
                 raise typer.Exit(1)
 
             _display_project_summary(session)
+        except typer.Exit:
+            # Re-raise typer.Exit without catching it
+            raise
         except RuntimeError as e:
             console.print(f"[red]Error: {e}[/red]")
             raise typer.Exit(1)
@@ -262,6 +265,9 @@ def quickstart(
             else:
                 # Last loop completed
                 break
+        except typer.Exit:
+            # Re-raise typer.Exit without catching it
+            raise
         except RuntimeError as e:
             console.print(f"[red]Error: {e}[/red]")
             raise typer.Exit(1)
