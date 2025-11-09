@@ -8,19 +8,20 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from qf.utils import find_project_file
+from qf.utils import ExportFormat, require_project
 
 app = typer.Typer(help="Export snapshots and views")
 console = Console()
 
 
 @app.command(name="view")
+@require_project
 def export_view(
     snapshot: Optional[str] = typer.Option(
         None, "--snapshot", "-s", help="Snapshot ID to export"
     ),
     format: str = typer.Option(
-        "html",
+        ExportFormat.HTML.value,
         "--format",
         "-f",
         help="Output format: html, markdown",
@@ -41,17 +42,11 @@ def export_view(
         qf export view --output view.html       # Custom output path
     """
     try:
-        # Check if project exists
-        project_file = find_project_file()
-        if not project_file:
-            console.print(
-                "[red]Error: No QuestFoundry project found in current directory.[/red]"
-            )
-            raise typer.Exit(1)
-
-        # Validate format
-        valid_formats = ["html", "markdown"]
-        if format.lower() not in valid_formats:
+        # Validate format using enum
+        try:
+            format_enum = ExportFormat(format.lower())
+        except ValueError:
+            valid_formats = [fmt.value for fmt in ExportFormat]
             console.print(
                 f"[red]Error: Invalid format '{format}'. "
                 f"Valid formats: {', '.join(valid_formats)}[/red]"
@@ -74,11 +69,11 @@ def export_view(
         console.print(f"[dim]  Writing to {output_path}...[/dim]")
 
         # Create a simple output file to demonstrate success
-        with open(output_path, "w") as f:
-            if format.lower() == "html":
+        with open(output_path, "w", encoding="utf-8") as f:
+            if format_enum == ExportFormat.HTML:
                 f.write("<html>\n<head><title>View</title></head>\n")
                 f.write("<body><h1>QuestFoundry View</h1></body>\n</html>")
-            else:  # markdown
+            elif format_enum == ExportFormat.MARKDOWN:
                 f.write("# QuestFoundry View\n\n")
                 f.write("This is a placeholder view export.\n")
 
@@ -102,6 +97,7 @@ def export_view(
 
 
 @app.command(name="git")
+@require_project
 def export_git(
     snapshot: Optional[str] = typer.Option(
         None, "--snapshot", "-s", help="Snapshot ID to export"
@@ -124,13 +120,6 @@ def export_git(
         qf export git --output ./exports        # Custom output directory
     """
     try:
-        # Check if project exists
-        project_file = find_project_file()
-        if not project_file:
-            console.print(
-                "[red]Error: No QuestFoundry project found in current directory.[/red]"
-            )
-            raise typer.Exit(1)
 
         # Show what we're doing
         snapshot_text = f" (snapshot: {snapshot})" if snapshot else " (latest)"
@@ -150,15 +139,19 @@ def export_git(
         (output_path / "content").mkdir(exist_ok=True)
 
         # Create placeholder files
-        with open(output_path / "metadata" / "snapshot.yml", "w") as f:
+        with open(
+            output_path / "metadata" / "snapshot.yml", "w", encoding="utf-8"
+        ) as f:
             f.write("# Snapshot Metadata\n")
             f.write(f"snapshot_id: {snapshot or 'latest'}\n")
             f.write("format_version: 1.0\n")
 
-        with open(output_path / "artifacts" / ".gitkeep", "w") as f:
+        with open(
+            output_path / "artifacts" / ".gitkeep", "w", encoding="utf-8"
+        ) as f:
             f.write("")
 
-        with open(output_path / "content" / ".gitkeep", "w") as f:
+        with open(output_path / "content" / ".gitkeep", "w", encoding="utf-8") as f:
             f.write("")
 
         # Show result

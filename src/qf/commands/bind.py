@@ -8,17 +8,18 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from qf.utils import find_project_file
+from qf.utils import BindFormat, require_project
 
 app = typer.Typer(help="Bind and render views from snapshots")
 console = Console()
 
 
 @app.command(name="view")
+@require_project
 def bind_view(
     snapshot_id: str = typer.Argument(..., help="Snapshot ID to bind"),
     format: str = typer.Option(
-        "html",
+        BindFormat.HTML.value,
         "--format",
         "-f",
         help="Output format: html, markdown, pdf",
@@ -39,17 +40,11 @@ def bind_view(
         qf bind view snap-123 --output bound.html        # Custom output
     """
     try:
-        # Check if project exists
-        project_file = find_project_file()
-        if not project_file:
-            console.print(
-                "[red]Error: No QuestFoundry project found in current directory.[/red]"
-            )
-            raise typer.Exit(1)
-
-        # Validate format
-        valid_formats = ["html", "markdown", "pdf"]
-        if format.lower() not in valid_formats:
+        # Validate format using enum
+        try:
+            format_enum = BindFormat(format.lower())
+        except ValueError:
+            valid_formats = [fmt.value for fmt in BindFormat]
             console.print(
                 f"[red]Error: Invalid format '{format}'. "
                 f"Valid formats: {', '.join(valid_formats)}[/red]"
@@ -75,17 +70,22 @@ def bind_view(
         console.print(f"[dim]  Rendering to {output_path}...[/dim]")
 
         # Create a simple output file to demonstrate success
-        with open(output_path, "w") as f:
-            if format.lower() == "html":
-                f.write("<html>\n<head><title>Bound View</title></head>\n")
-                f.write(
-                    f"<body><h1>Bound View from {snapshot_id}</h1></body>\n</html>"
-                )
-            elif format.lower() == "markdown":
-                f.write(f"# Bound View from {snapshot_id}\n\n")
-                f.write("This is a placeholder bound view.\n")
-            else:  # pdf
-                f.write(f"%PDF-1.4\n%Placeholder PDF for {snapshot_id}\n")
+        if format_enum == BindFormat.PDF:
+            # PDF uses binary mode
+            with open(output_path, "wb") as f:
+                pdf_content = f"%PDF-1.4\n%Placeholder PDF for {snapshot_id}\n"
+                f.write(pdf_content.encode("utf-8"))
+        else:
+            # HTML and Markdown use text mode with UTF-8 encoding
+            with open(output_path, "w", encoding="utf-8") as f:
+                if format_enum == BindFormat.HTML:
+                    f.write("<html>\n<head><title>Bound View</title></head>\n")
+                    f.write(
+                        f"<body><h1>Bound View from {snapshot_id}</h1></body>\n</html>"
+                    )
+                elif format_enum == BindFormat.MARKDOWN:
+                    f.write(f"# Bound View from {snapshot_id}\n\n")
+                    f.write("This is a placeholder bound view.\n")
 
         # Show result
         result_text = Text()

@@ -1,32 +1,10 @@
 """Tests for qf bind commands (view binding/rendering)."""
 
-import pytest
 from typer.testing import CliRunner
 
 from qf.cli import app
 
 runner = CliRunner()
-
-
-@pytest.fixture
-def mock_questionary_init(monkeypatch):
-    """Mock questionary for project initialization."""
-    import questionary
-
-    original_text = questionary.text
-
-    def mock_text(message, **kwargs):
-        """Mock questionary.text to auto-respond to init prompts."""
-        result = original_text(message, **kwargs)
-        if "name" in message.lower():
-            result.ask = lambda: "test-project"
-        elif "description" in message.lower():
-            result.ask = lambda: "Test project for bind tests"
-        else:
-            result.ask = lambda: ""
-        return result
-
-    monkeypatch.setattr(questionary, "text", mock_text)
 
 
 class TestBindViewCommand:
@@ -63,7 +41,7 @@ class TestBindViewCommand:
         # Try without snapshot ID
         result = runner.invoke(app, ["bind", "view"])
 
-        assert result.exit_code != 0 or "snapshot" in result.stdout.lower()
+        assert result.exit_code != 0
 
     def test_bind_view_html_format(self, tmp_path, monkeypatch, mock_questionary_init):
         """Test binding view to HTML format."""
@@ -78,8 +56,8 @@ class TestBindViewCommand:
             app, ["bind", "view", "snapshot-123", "--format", "html"]
         )
 
-        # Should succeed or indicate snapshot not found
-        assert result.exit_code == 0 or "snapshot" in result.stdout.lower()
+        assert result.exit_code == 0
+        assert "View bound successfully" in result.stdout
 
     def test_bind_view_markdown_format(
         self, tmp_path, monkeypatch, mock_questionary_init
@@ -96,8 +74,8 @@ class TestBindViewCommand:
             app, ["bind", "view", "snapshot-123", "--format", "markdown"]
         )
 
-        # Should succeed or indicate snapshot not found
-        assert result.exit_code == 0 or "snapshot" in result.stdout.lower()
+        assert result.exit_code == 0
+        assert "View bound successfully" in result.stdout
 
     def test_bind_view_pdf_format(self, tmp_path, monkeypatch, mock_questionary_init):
         """Test binding view to PDF format."""
@@ -112,8 +90,8 @@ class TestBindViewCommand:
             app, ["bind", "view", "snapshot-123", "--format", "pdf"]
         )
 
-        # Should succeed or indicate snapshot not found
-        assert result.exit_code == 0 or "snapshot" in result.stdout.lower()
+        assert result.exit_code == 0
+        assert "View bound successfully" in result.stdout
 
     def test_bind_view_with_output_path(
         self, tmp_path, monkeypatch, mock_questionary_init
@@ -140,8 +118,8 @@ class TestBindViewCommand:
             ],
         )
 
-        # Should succeed or indicate snapshot not found
-        assert result.exit_code == 0 or "snapshot" in result.stdout.lower()
+        assert result.exit_code == 0
+        assert "View bound successfully" in result.stdout
 
     def test_bind_view_invalid_format(
         self, tmp_path, monkeypatch, mock_questionary_init
@@ -158,7 +136,8 @@ class TestBindViewCommand:
             app, ["bind", "view", "snapshot-123", "--format", "invalid"]
         )
 
-        assert result.exit_code != 0 or "format" in result.stdout.lower()
+        assert result.exit_code != 0
+        assert "Invalid format" in result.stdout
 
     def test_bind_view_shows_progress(
         self, tmp_path, monkeypatch, mock_questionary_init
@@ -173,13 +152,8 @@ class TestBindViewCommand:
         # Bind view
         result = runner.invoke(app, ["bind", "view", "snapshot-123"])
 
-        assert result.exit_code == 0 or "snapshot" in result.stdout.lower()
-        # Should show some progress or bind info
-        assert (
-            "bind" in result.stdout.lower()
-            or "view" in result.stdout.lower()
-            or "snapshot" in result.stdout.lower()
-        )
+        assert result.exit_code == 0
+        assert "View bound successfully" in result.stdout
 
     def test_bind_view_default_format(
         self, tmp_path, monkeypatch, mock_questionary_init
@@ -194,4 +168,5 @@ class TestBindViewCommand:
         # Bind without specifying format (should use default)
         result = runner.invoke(app, ["bind", "view", "snapshot-123"])
 
-        assert result.exit_code == 0 or "snapshot" in result.stdout.lower()
+        assert result.exit_code == 0
+        assert "View bound successfully" in result.stdout

@@ -1,32 +1,10 @@
 """Tests for qf export commands (view and git exports)."""
 
-import pytest
 from typer.testing import CliRunner
 
 from qf.cli import app
 
 runner = CliRunner()
-
-
-@pytest.fixture
-def mock_questionary_init(monkeypatch):
-    """Mock questionary for project initialization."""
-    import questionary
-
-    original_text = questionary.text
-
-    def mock_text(message, **kwargs):
-        """Mock questionary.text to auto-respond to init prompts."""
-        result = original_text(message, **kwargs)
-        if "name" in message.lower():
-            result.ask = lambda: "test-project"
-        elif "description" in message.lower():
-            result.ask = lambda: "Test project for export tests"
-        else:
-            result.ask = lambda: ""
-        return result
-
-    monkeypatch.setattr(questionary, "text", mock_text)
 
 
 class TestExportViewCommand:
@@ -117,8 +95,8 @@ class TestExportViewCommand:
         # Export with snapshot ID
         result = runner.invoke(app, ["export", "view", "--snapshot", "snapshot-123"])
 
-        # Should complete or indicate snapshot not found
-        assert result.exit_code == 0 or "snapshot" in result.stdout.lower()
+        assert result.exit_code == 0
+        assert "View exported successfully" in result.stdout
 
     def test_export_view_invalid_format(
         self, tmp_path, monkeypatch, mock_questionary_init
@@ -226,8 +204,8 @@ class TestExportGitCommand:
             ],
         )
 
-        # Should complete or indicate snapshot not found
-        assert result.exit_code == 0 or "snapshot" in result.stdout.lower()
+        assert result.exit_code == 0
+        assert "Git export created successfully" in result.stdout
 
     def test_export_git_shows_progress(
         self, tmp_path, monkeypatch, mock_questionary_init
