@@ -71,10 +71,11 @@ Development guidelines for AI assistants (Claude Code)
 - ✅ Epic 6: Asset Generation (merged into main)
 - ✅ Epic 7: Quickstart Workflow (merged into main)
 - ✅ Epic 5 Updates: Multi-iteration Loop Tracking (merged into main)
+- ✅ Epic 8: Export & Views (merged into main)
 
 **In Progress**:
-- 🔄 Epic 8: Export & Views (branch: to be created)
+- 🔄 Epic 9: Shell Completion (branch: claude/epic-9-shell-completion-011CUx9BZKoejEJ7zjNLaJRj)
 
-**Progress**: 8/12 epics complete (67%)
+**Progress**: 9/12 epics complete (75%)
 
-**Next**: Epic 8: Export & Views
+**Next**: Epic 9: Shell Completion
