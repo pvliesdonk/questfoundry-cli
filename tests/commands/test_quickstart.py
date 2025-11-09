@@ -227,7 +227,9 @@ class TestQuickstartCommand:
             os.chdir(tmpdir)
 
             try:
-                result = runner.invoke(app, ["quickstart", "--help"])
+                result = runner.invoke(
+                    app, ["quickstart", "--help"], env={"COLUMNS": "200"}
+                )
                 assert result.exit_code == 0
                 assert "guided" in result.stdout.lower()
                 assert "interactive" in result.stdout.lower()
@@ -237,7 +239,9 @@ class TestQuickstartCommand:
 
     def test_quickstart_help(self) -> None:
         """Test quickstart help text."""
-        result = runner.invoke(app, ["quickstart", "--help"])
+        result = runner.invoke(
+            app, ["quickstart", "--help"], env={"COLUMNS": "200"}
+        )
 
         assert result.exit_code == 0
         assert "quickstart" in result.stdout.lower()
@@ -247,17 +251,23 @@ class TestQuickstartCommand:
 
     def test_quickstart_guided_flag(self) -> None:
         """Test that --guided flag is recognized."""
-        result = runner.invoke(app, ["quickstart", "--help"])
+        result = runner.invoke(
+            app, ["quickstart", "--help"], env={"COLUMNS": "200"}
+        )
         assert "--guided" in result.stdout
 
     def test_quickstart_interactive_flag(self) -> None:
         """Test that --interactive flag is recognized."""
-        result = runner.invoke(app, ["quickstart", "--help"])
+        result = runner.invoke(
+            app, ["quickstart", "--help"], env={"COLUMNS": "200"}
+        )
         assert "--interactive" in result.stdout or "-i" in result.stdout
 
     def test_quickstart_resume_flag(self) -> None:
         """Test that --resume flag is recognized."""
-        result = runner.invoke(app, ["quickstart", "--help"])
+        result = runner.invoke(
+            app, ["quickstart", "--help"], env={"COLUMNS": "200"}
+        )
         assert "--resume" in result.stdout
 
 
