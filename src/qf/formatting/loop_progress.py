@@ -7,7 +7,7 @@ in and whether they are first-pass or revision executions.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 
 @dataclass
@@ -134,7 +134,10 @@ class LoopProgressTracker:
             raise RuntimeError("No active iteration. Call start_iteration first.")
 
         step = Step(
-            name=step_name, agent=agent, is_revision=is_revision, start_time=datetime.now()
+            name=step_name,
+            agent=agent,
+            is_revision=is_revision,
+            start_time=datetime.now(),
         )
         self.current_iteration.steps.append(step)
         return step
@@ -197,7 +200,7 @@ class LoopProgressTracker:
             return self.current_iteration.stabilized
         return False
 
-    def get_summary(self) -> dict:
+    def get_summary(self) -> dict[str, Any]:
         """Get summary statistics about loop execution.
 
         Returns:

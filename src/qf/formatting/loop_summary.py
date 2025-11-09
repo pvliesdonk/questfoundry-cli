@@ -210,6 +210,9 @@ def display_iteration_summary_panel(tracker: LoopProgressTracker) -> None:
 
     Shows iteration count, step revisions, and stabilization status.
 
+    Note: Currently unused. Prepared for future integration to display
+    iteration summaries in execution reports and dashboards.
+
     Args:
         tracker: LoopProgressTracker with execution data
     """
@@ -248,6 +251,9 @@ def display_revision_details(tracker: LoopProgressTracker) -> None:
     Display detailed revision information for multi-iteration loops.
 
     Shows which steps were revised in each iteration.
+
+    Note: Currently unused. Prepared for future integration to display
+    detailed revision analysis in execution reports.
 
     Args:
         tracker: LoopProgressTracker with execution data

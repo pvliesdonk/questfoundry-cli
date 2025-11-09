@@ -100,7 +100,11 @@ def test_run_shows_summary(tmp_path, monkeypatch, mock_questionary_init):
     assert "Summary" in result.stdout
     assert "Codex Expansion" in result.stdout
     # Check for iteration or performance metrics (from iteration-aware display)
-    assert "Iteration" in result.stdout or "Stabilized" in result.stdout or "Performance" in result.stdout
+    assert (
+        "Iteration" in result.stdout
+        or "Stabilized" in result.stdout
+        or "Performance" in result.stdout
+    )
 
 
 def test_run_suggests_next_action(tmp_path, monkeypatch, mock_questionary_init):

@@ -6,7 +6,6 @@ revisions, blockers, and overall efficiency metrics.
 
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
 
@@ -59,15 +58,12 @@ def display_iteration_steps(iteration: Iteration) -> None:
         if step.blocked:
             icon = "✗"
             color = "red"
-            status_text = "[red]BLOCKED[/red]"
         elif step.status == "completed":
             icon = "✓" if not step.is_revision else "↻"
             color = "green"
-            status_text = "[green]completed[/green]"
         else:
             icon = "→"
             color = "yellow"
-            status_text = "[yellow]running[/yellow]"
 
         # Revision indicator
         revision_indicator = " (revision)" if step.is_revision else ""
@@ -175,8 +171,12 @@ def display_efficiency_metrics(tracker: LoopProgressTracker) -> None:
     text.append("Efficiency Metrics\n", style="bold cyan")
     text.append(f"\nTotal step executions: {total_steps}\n", style="cyan")
     text.append(f"Step revisions: {revised_steps}\n", style="yellow")
-    text.append(f"Step reuse: {reused_steps} ({efficiency_percent:.0f}%)\n", style="green")
-    text.append(f"Total duration: {format_duration(tracker.total_duration)}", style="cyan")
+    text.append(
+        f"Step reuse: {reused_steps} ({efficiency_percent:.0f}%)\n", style="green"
+    )
+    text.append(
+        f"Total duration: {format_duration(tracker.total_duration)}", style="cyan"
+    )
 
     console.print(Panel(text, border_style="cyan", title="Performance"))
     console.print()

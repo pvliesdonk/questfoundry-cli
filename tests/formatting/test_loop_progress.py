@@ -3,9 +3,7 @@
 from datetime import datetime, timedelta
 from time import sleep
 
-import pytest
-
-from qf.formatting.loop_progress import LoopProgressTracker, Iteration, Step
+from qf.formatting.loop_progress import Iteration, LoopProgressTracker, Step
 
 
 class TestStep:
@@ -25,10 +23,10 @@ class TestStep:
         """Test step completion tracking."""
         step = Step(name="Test Step", agent="Agent")
         step.start_time = datetime.now()
-        step.end_time = datetime.now()
+        step.end_time = step.start_time + timedelta(seconds=1)
 
         assert step.status == "completed"
-        assert step.duration > 0
+        assert step.duration == 1.0
 
     def test_step_blocked_status(self) -> None:
         """Test step blocking tracking."""
@@ -55,14 +53,19 @@ class TestIteration:
         """Test step counting in iteration."""
         iteration = Iteration(iteration_number=1)
 
+        # Create step1 with 1 second duration
+        now = datetime.now()
         step1 = Step(name="Step 1", agent="Agent", is_revision=False)
-        step1.end_time = datetime.now()
-        step1.start_time = datetime.now() - timedelta(seconds=1)
+        step1.start_time = now
+        step1.end_time = now + timedelta(seconds=1)
 
+        # Create step2 with 1 second duration
+        now2 = datetime.now()
         step2 = Step(name="Step 2", agent="Agent", is_revision=True)
-        step2.end_time = datetime.now()
-        step2.start_time = datetime.now() - timedelta(seconds=1)
+        step2.start_time = now2
+        step2.end_time = now2 + timedelta(seconds=1)
 
+        # Create step3 as blocked (no end time)
         step3 = Step(name="Step 3", agent="Agent", is_revision=False)
         step3.blocked = True
 
@@ -113,7 +116,7 @@ class TestLoopProgressTracker:
         tracker.start_loop()
 
         # Iteration 1
-        iter1 = tracker.start_iteration(1)
+        tracker.start_iteration(1)
         step1_iter1 = tracker.start_step("Step 1", "Agent A")
         tracker.complete_step(step1_iter1)
 
@@ -127,11 +130,15 @@ class TestLoopProgressTracker:
         tracker.record_showrunner_decision("Revising steps 1-2")
 
         # Iteration 2
-        iter2 = tracker.start_iteration(2)
-        step1_iter2 = tracker.start_step("Step 1 (revised)", "Agent A", is_revision=True)
+        tracker.start_iteration(2)
+        step1_iter2 = tracker.start_step(
+            "Step 1 (revised)", "Agent A", is_revision=True
+        )
         tracker.complete_step(step1_iter2)
 
-        step2_iter2 = tracker.start_step("Step 2 (revised)", "Agent B", is_revision=True)
+        step2_iter2 = tracker.start_step(
+            "Step 2 (revised)", "Agent B", is_revision=True
+        )
         tracker.complete_step(step2_iter2)
 
         step3_iter2 = tracker.start_step("Step 3", "Agent C")
@@ -164,7 +171,7 @@ class TestLoopProgressTracker:
         tracker = LoopProgressTracker(loop_name="Story Spark")
         tracker.start_loop()
 
-        iter1 = tracker.start_iteration(1)
+        tracker.start_iteration(1)
         step = tracker.start_step("Test", "Agent")
         tracker.complete_step(step)
         tracker.mark_stabilized()
@@ -184,15 +191,17 @@ class TestLoopProgressTracker:
         tracker.start_loop()
 
         # Iteration 1: 3 steps
-        iter1 = tracker.start_iteration(1)
+        tracker.start_iteration(1)
         for i in range(3):
             step = tracker.start_step(f"Step {i+1}", "Agent")
             tracker.complete_step(step)
         tracker.complete_iteration()
 
         # Iteration 2: 1 revised + 2 reused
-        iter2 = tracker.start_iteration(2)
-        revised = tracker.start_step("Step 1 (revised)", "Agent", is_revision=True)
+        tracker.start_iteration(2)
+        revised = tracker.start_step(
+            "Step 1 (revised)", "Agent", is_revision=True
+        )
         tracker.complete_step(revised)
         for i in range(1, 3):
             step = tracker.start_step(f"Step {i+1} (reused)", "Agent")

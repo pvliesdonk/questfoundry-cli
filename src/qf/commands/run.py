@@ -8,10 +8,12 @@ import yaml
 from rich.console import Console
 from rich.panel import Panel
 
-from qf.formatting.loop_summary import display_loop_summary, suggest_next_loop
+from qf.formatting.iterations import (
+    display_efficiency_metrics,
+    display_full_iteration_history,
+)
 from qf.formatting.loop_progress import LoopProgressTracker
-from qf.formatting.progress import ActivityTracker
-from qf.formatting.iterations import display_full_iteration_history, display_efficiency_metrics
+from qf.formatting.loop_summary import display_loop_summary, suggest_next_loop
 from qf.utils import WORKSPACE_DIR, find_project_file
 
 console = Console()
@@ -120,7 +122,7 @@ def run(
 
     # Simulate multi-iteration execution
     # Iteration 1: First pass execution
-    iteration1 = progress_tracker.start_iteration(1)
+    progress_tracker.start_iteration(1)
 
     # Simulate steps in iteration 1
     step1 = progress_tracker.start_step("Context initialization", "Lore Weaver")
@@ -140,10 +142,12 @@ def run(
     progress_tracker.record_showrunner_decision("Revising topology analysis (Step 2)")
 
     # Iteration 2: Revision cycle
-    iteration2 = progress_tracker.start_iteration(2)
+    progress_tracker.start_iteration(2)
 
     # Revised step (second-pass)
-    step2_revised = progress_tracker.start_step("Topology analysis (revised)", "Plotwright", is_revision=True)
+    step2_revised = progress_tracker.start_step(
+        "Topology analysis (revised)", "Plotwright", is_revision=True
+    )
     time.sleep(0.25)
     progress_tracker.complete_step(step2_revised)
 

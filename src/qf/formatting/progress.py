@@ -173,6 +173,9 @@ def display_loop_iteration_progress(
 
     Shows current iteration and step being executed.
 
+    Note: Currently unused. Prepared for future integration with
+    questfoundry-py Showrunner for real-time progress display.
+
     Args:
         tracker: LoopProgressTracker with execution data
         current_step: Optional current step being executed
@@ -198,6 +201,9 @@ def display_loop_stabilization_status(tracker: LoopProgressTracker) -> None:
     Display loop stabilization status.
 
     Shows whether loop has stabilized and total iteration count.
+
+    Note: Currently unused. Prepared for future integration to display
+    final stabilization status in interactive or streaming modes.
 
     Args:
         tracker: LoopProgressTracker with execution data
