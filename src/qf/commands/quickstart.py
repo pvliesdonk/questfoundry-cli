@@ -1,5 +1,8 @@
 """Quickstart workflow command for rapid project setup."""
 
+import shutil
+import sys
+
 import typer
 from rich.console import Console
 from rich.panel import Panel
@@ -16,7 +19,15 @@ from qf.interactive.prompts import (
 )
 from qf.utils import find_project_file
 
-console = Console()
+# Initialize Console defensively for non-TTY environments
+_is_tty = sys.stdout.isatty() if hasattr(sys.stdout, "isatty") else False
+_terminal_size = shutil.get_terminal_size(fallback=(120, 40))
+
+console = Console(
+    force_terminal=_is_tty,
+    width=_terminal_size.columns,
+    color_system="auto" if _is_tty else None,
+)
 
 
 def _display_welcome() -> None:
@@ -160,40 +171,44 @@ def quickstart(
         _display_project_summary(session)
     else:
         # New quickstart
-        _display_welcome()
+        try:
+            _display_welcome()
 
-        # Ask setup questions
-        premise = ask_premise()
-        if not premise:
-            console.print("[red]Cancelled[/red]")
+            # Ask setup questions
+            premise = ask_premise()
+            if not premise:
+                console.print("[red]Cancelled[/red]")
+                raise typer.Exit(1)
+
+            tone = ask_tone()
+            if not tone:
+                console.print("[red]Cancelled[/red]")
+                raise typer.Exit(1)
+
+            length = ask_length()
+            if not length:
+                console.print("[red]Cancelled[/red]")
+                raise typer.Exit(1)
+
+            project_name = ask_project_name(premise)
+            if not project_name:
+                console.print("[red]Cancelled[/red]")
+                raise typer.Exit(1)
+
+            # Confirm setup
+            if not confirm_setup(premise, tone, length, project_name):
+                console.print("[yellow]Cancelled[/yellow]")
+                raise typer.Exit(0)
+
+            # Create project
+            if not session.create_project(project_name, premise, tone, length):
+                console.print("[red]Failed to create project[/red]")
+                raise typer.Exit(1)
+
+            _display_project_summary(session)
+        except RuntimeError as e:
+            console.print(f"[red]Error: {e}[/red]")
             raise typer.Exit(1)
-
-        tone = ask_tone()
-        if not tone:
-            console.print("[red]Cancelled[/red]")
-            raise typer.Exit(1)
-
-        length = ask_length()
-        if not length:
-            console.print("[red]Cancelled[/red]")
-            raise typer.Exit(1)
-
-        project_name = ask_project_name(premise)
-        if not project_name:
-            console.print("[red]Cancelled[/red]")
-            raise typer.Exit(1)
-
-        # Confirm setup
-        if not confirm_setup(premise, tone, length, project_name):
-            console.print("[yellow]Cancelled[/yellow]")
-            raise typer.Exit(0)
-
-        # Create project
-        if not session.create_project(project_name, premise, tone, length):
-            console.print("[red]Failed to create project[/red]")
-            raise typer.Exit(1)
-
-        _display_project_summary(session)
 
     # Enable interactive mode if requested
     if interactive:
@@ -217,34 +232,39 @@ def quickstart(
     ]
 
     for loop_name in suggested_loops:
-        # Execute loop
-        _simulate_loop_execution(loop_name)
-        session.complete_loop(loop_name)
+        try:
+            # Execute loop
+            _simulate_loop_execution(loop_name)
+            session.complete_loop(loop_name)
 
-        # Checkpoint
-        session.save_checkpoint()
+            # Checkpoint
+            session.save_checkpoint()
 
-        # Ask to review artifacts
-        if ask_review_artifacts():
-            console.print("[cyan]Artifact review would show list here[/cyan]")
-            console.print(
-                "[cyan]Tip: Use [green]qf list[/green] and [green]qf show[/green] "
-                "to inspect artifacts[/cyan]\n"
-            )
-
-        # Ask to continue
-        next_loop_idx = suggested_loops.index(loop_name) + 1
-        if next_loop_idx < len(suggested_loops):
-            next_loop = suggested_loops[next_loop_idx]
-            if not ask_continue_loop(next_loop):
-                console.print("[yellow]Quickstart paused[/yellow]")
+            # Ask to review artifacts
+            if ask_review_artifacts():
+                console.print("[cyan]Artifact review would show list here[/cyan]")
                 console.print(
-                    "[cyan]Resume with: [green]qf quickstart --resume[/green][/cyan]"
+                    "[cyan]Tip: Use [green]qf list[/green] and [green]qf show[/green] "
+                    "to inspect artifacts[/cyan]\n"
                 )
-                raise typer.Exit(0)
-        else:
-            # Last loop completed
-            break
+
+            # Ask to continue
+            next_loop_idx = suggested_loops.index(loop_name) + 1
+            if next_loop_idx < len(suggested_loops):
+                next_loop = suggested_loops[next_loop_idx]
+                if not ask_continue_loop(next_loop):
+                    console.print("[yellow]Quickstart paused[/yellow]")
+                    console.print(
+                        "[cyan]Resume with: "
+                        "[green]qf quickstart --resume[/green][/cyan]"
+                    )
+                    raise typer.Exit(0)
+            else:
+                # Last loop completed
+                break
+        except RuntimeError as e:
+            console.print(f"[red]Error: {e}[/red]")
+            raise typer.Exit(1)
 
     # Completion
     _display_project_summary(session)

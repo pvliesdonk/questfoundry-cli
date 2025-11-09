@@ -1,11 +1,23 @@
 """Quickstart-specific formatting and display utilities."""
 
+import shutil
+import sys
+
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.tree import Tree
 
-console = Console()
+# Initialize Console defensively for non-TTY environments
+# Use safe terminal size fallback and disable colors if not a TTY
+_is_tty = sys.stdout.isatty() if hasattr(sys.stdout, "isatty") else False
+_terminal_size = shutil.get_terminal_size(fallback=(120, 40))
+
+console = Console(
+    force_terminal=_is_tty,
+    width=_terminal_size.columns,
+    color_system="auto" if _is_tty else None,
+)
 
 
 def display_quickstart_header(project_name: str) -> None:

@@ -1,11 +1,29 @@
 """User prompts and questions for interactive mode."""
 
+import sys
 from typing import Optional
 
 import questionary
 from rich.console import Console
 
-console = Console()
+# Initialize Console defensively for non-TTY environments
+console = Console(
+    force_terminal=sys.stdout.isatty() if hasattr(sys.stdout, "isatty") else False
+)
+
+
+def _is_interactive() -> bool:
+    """Check if we're in an interactive TTY environment.
+
+    Returns:
+        True if both stdin and stdout are TTYs, False otherwise
+    """
+    return (
+        hasattr(sys.stdin, "isatty")
+        and hasattr(sys.stdout, "isatty")
+        and sys.stdin.isatty()
+        and sys.stdout.isatty()
+    )
 
 
 def ask_premise() -> str:
@@ -13,7 +31,16 @@ def ask_premise() -> str:
 
     Returns:
         Story premise text (at least 10 characters)
+
+    Raises:
+        RuntimeError: If not in an interactive TTY environment
     """
+    if not _is_interactive():
+        raise RuntimeError(
+            "Interactive mode requires a TTY. "
+            "Please run 'qf quickstart' in an interactive terminal."
+        )
+
     return questionary.text(
         "What is your story premise?",
         validate=lambda x: len(x) >= 10 or "Please provide at least 10 characters",
@@ -25,7 +52,16 @@ def ask_tone() -> str:
 
     Returns:
         Selected tone (mystery, horror, adventure, sci-fi, romance, fantasy)
+
+    Raises:
+        RuntimeError: If not in an interactive TTY environment
     """
+    if not _is_interactive():
+        raise RuntimeError(
+            "Interactive mode requires a TTY. "
+            "Please run 'qf quickstart' in an interactive terminal."
+        )
+
     return questionary.select(
         "What tone or genre?",
         choices=[
@@ -46,7 +82,16 @@ def ask_length() -> str:
 
     Returns:
         Selected length (short, medium, long)
+
+    Raises:
+        RuntimeError: If not in an interactive TTY environment
     """
+    if not _is_interactive():
+        raise RuntimeError(
+            "Interactive mode requires a TTY. "
+            "Please run 'qf quickstart' in an interactive terminal."
+        )
+
     return questionary.select(
         "How long should the story be?",
         choices=[
@@ -65,7 +110,16 @@ def ask_project_name(premise: str) -> str:
 
     Returns:
         Project name
+
+    Raises:
+        RuntimeError: If not in an interactive TTY environment
     """
+    if not _is_interactive():
+        raise RuntimeError(
+            "Interactive mode requires a TTY. "
+            "Please run 'qf quickstart' in an interactive terminal."
+        )
+
     # Create a default name from premise
     default_name = "-".join(premise.split()[:3]).lower()[:30]
 
@@ -87,7 +141,16 @@ def confirm_setup(premise: str, tone: str, length: str, name: str) -> bool:
 
     Returns:
         True if user confirms, False otherwise
+
+    Raises:
+        RuntimeError: If not in an interactive TTY environment
     """
+    if not _is_interactive():
+        raise RuntimeError(
+            "Interactive mode requires a TTY. "
+            "Please run 'qf quickstart' in an interactive terminal."
+        )
+
     # Display formatted setup summary
     console.print()
     console.print("[cyan]Project Setup[/cyan]")
@@ -108,7 +171,16 @@ def ask_review_artifacts() -> bool:
 
     Returns:
         True if user wants to review, False otherwise
+
+    Raises:
+        RuntimeError: If not in an interactive TTY environment
     """
+    if not _is_interactive():
+        raise RuntimeError(
+            "Interactive mode requires a TTY. "
+            "Please run 'qf quickstart' in an interactive terminal."
+        )
+
     return questionary.confirm(
         "Review artifacts?",
         auto_enter=True,
@@ -124,7 +196,16 @@ def ask_continue_loop(next_loop: str) -> bool:
 
     Returns:
         True to continue, False to exit
+
+    Raises:
+        RuntimeError: If not in an interactive TTY environment
     """
+    if not _is_interactive():
+        raise RuntimeError(
+            "Interactive mode requires a TTY. "
+            "Please run 'qf quickstart' in an interactive terminal."
+        )
+
     return questionary.confirm(
         f"Continue with {next_loop}?",
         auto_enter=True,
@@ -141,7 +222,16 @@ def ask_agent_response(question: str, suggestions: Optional[list[str]] = None) -
 
     Returns:
         User's response text
+
+    Raises:
+        RuntimeError: If not in an interactive TTY environment
     """
+    if not _is_interactive():
+        raise RuntimeError(
+            "Interactive mode requires a TTY. "
+            "Please run 'qf quickstart' in an interactive terminal."
+        )
+
     if suggestions:
         # Show suggestions as a select menu
         choices = suggestions + ["Other (type custom response)"]
