@@ -2,17 +2,16 @@
 
 from typing import List, Optional
 
-from click import Context, Parameter
+from click import Context
 
 
 def complete_artifact_ids(
-    ctx: Optional[Context] = None,
-    param: Optional[Parameter] = None,
-    incomplete: str = "",
+    ctx: Optional[Context] = None, incomplete: str = ""
 ) -> List[str]:
     """Complete artifact IDs from the current project.
 
     Args:
+        ctx: Click context (optional, for shell completion compatibility)
         incomplete: Partial artifact ID being completed
 
     Returns:
@@ -54,23 +53,23 @@ def complete_artifact_ids(
             "artifact-001",
         ]
         for pattern in patterns:
-            if pattern.startswith(incomplete):
+            if pattern.startswith(incomplete) and pattern not in completions:
                 completions.append(pattern)
 
-        return completions
-    except Exception:
-        # Return empty list on any error
+        # Deduplicate while preserving order
+        return list(dict.fromkeys(completions))
+    except (OSError, ValueError, KeyError, TypeError):
+        # Return empty list on file or parsing errors
         return completions
 
 
 def complete_loop_names(
-    ctx: Optional[Context] = None,
-    param: Optional[Parameter] = None,
-    incomplete: str = "",
+    ctx: Optional[Context] = None, incomplete: str = ""
 ) -> List[str]:
     """Complete loop names available in the current project.
 
     Args:
+        ctx: Click context (optional, for shell completion compatibility)
         incomplete: Partial loop name being completed
 
     Returns:
@@ -103,25 +102,27 @@ def complete_loop_names(
             if loop_name.startswith(incomplete):
                 completions.append(loop_name)
 
-        return completions
-    except Exception:
-        # Return empty list on any error
+        # Deduplicate while preserving order
+        return list(dict.fromkeys(completions))
+    except (OSError, ValueError, KeyError, TypeError):
+        # Return empty list on file or parsing errors
         return completions
 
 
 def complete_provider_names(
-    ctx: Optional[Context] = None,
-    param: Optional[Parameter] = None,
-    incomplete: str = "",
+    ctx: Optional[Context] = None, incomplete: str = ""
 ) -> List[str]:
     """Complete provider names available in the system.
 
     Args:
+        ctx: Click context (optional, for shell completion compatibility)
         incomplete: Partial provider name being completed
 
     Returns:
         List of completion items for matching provider names
     """
+    from qf.utils import find_project_file, load_project_metadata
+
     completions: List[str] = []
 
     # Standard providers available in QuestFoundry
@@ -143,18 +144,20 @@ def complete_provider_names(
 
     # Add custom providers if any exist
     try:
-        from qf.utils import find_project_file, load_project_metadata
-
         project_file = find_project_file()
         if project_file:
             metadata = load_project_metadata(project_file)
             custom_providers = metadata.get("providers", {})
             if isinstance(custom_providers, dict):
                 for provider_name in custom_providers.keys():
-                    if provider_name.startswith(incomplete.lower()):
+                    if (
+                        provider_name.startswith(incomplete.lower())
+                        and provider_name not in completions
+                    ):
                         completions.append(provider_name)
-    except Exception:
+    except (OSError, ValueError, KeyError, TypeError):
         # Ignore errors when loading custom providers
         pass
 
-    return completions
+    # Deduplicate while preserving order
+    return list(dict.fromkeys(completions))

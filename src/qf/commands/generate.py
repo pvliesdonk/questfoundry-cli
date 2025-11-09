@@ -88,13 +88,13 @@ def validate_artifact_type(
 @app.command(name="image")
 def generate_image(
     shotlist_id: str = typer.Argument(
-        ..., help="Shotlist artifact ID", shell_complete=complete_artifact_ids
+        ..., help="Shotlist artifact ID", autocompletion=complete_artifact_ids
     ),
     provider: Optional[str] = typer.Option(
         None,
         "--provider",
         help="AI provider to use (e.g., dalle, midjourney)",
-        shell_complete=complete_provider_names,
+        autocompletion=complete_provider_names,
     ),
     model: Optional[str] = typer.Option(
         None, "--model", help="Model to use (provider-specific)"

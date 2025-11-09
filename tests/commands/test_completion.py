@@ -1,5 +1,6 @@
 """Tests for shell completion functionality."""
 
+import time
 
 from typer.testing import CliRunner
 
@@ -218,8 +219,6 @@ class TestCompletionPerformance:
 
     def test_completion_completes_quickly(self, tmp_path, monkeypatch):
         """Test that completion functions complete within timeout."""
-        import time
-
         monkeypatch.chdir(tmp_path)
 
         # Initialize project
@@ -237,8 +236,6 @@ class TestCompletionPerformance:
 
     def test_provider_completion_completes_quickly(self):
         """Test that provider completion is fast."""
-        import time
-
         from qf.completions.dynamic import complete_provider_names
 
         start = time.time()
