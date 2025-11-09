@@ -70,10 +70,11 @@ Development guidelines for AI assistants (Claude Code)
 - ✅ Epic 5: Loop Execution (merged into main)
 - ✅ Epic 6: Asset Generation (merged into main)
 - ✅ Epic 7: Quickstart Workflow (merged into main)
+- ✅ Epic 5 Updates: Multi-iteration Loop Tracking (merged into main)
 
 **In Progress**:
-- 🔄 Epic 5 Updates: Multi-iteration Loop Tracking (branch: claude/epic-5-iterations-updates-011CUx9BZKoejEJ7zjNLaJRj)
+- 🔄 Epic 8: Export & Views (branch: to be created)
 
-**Progress**: 7/12 epics complete, 1 epic update in progress (58%)
+**Progress**: 8/12 epics complete (67%)
 
 **Next**: Epic 8: Export & Views
