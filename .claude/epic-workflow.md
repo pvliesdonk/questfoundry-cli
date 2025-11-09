@@ -86,15 +86,30 @@ uv run ruff check .
 git push -u origin claude/epic-<number>-<name>-<session-id>
 ```
 
-### 5. Epic Completion
+### 5. Epic Completion - Definition of Done (DoD)
 
-Before marking epic complete:
+Before marking an epic as complete, it must meet the following criteria:
 
+**Code Quality:**
+- ✅ All tests pass (`uv run pytest`)
+- ✅ Type checking passes (`uv run mypy src/`)
+- ✅ Linting passes (`uv run ruff check .`)
+- ✅ Code formatted (`uv run ruff format .`)
+
+**Review & Documentation:**
+- ✅ At least one round of reviews completed
+- ✅ All review feedback addressed
+- ✅ Documentation updated (if applicable)
+
+**Completeness:**
 - ✅ All features implemented
-- ✅ All tests pass
-- ✅ Documentation updated
 - ✅ Commits follow conventional format
 - ✅ No outstanding issues
+
+**Branch Status:**
+- ✅ All changes committed
+- ✅ All changes pushed to remote branch
+- ✅ Working tree clean
 
 ### 6. Cleanup
 

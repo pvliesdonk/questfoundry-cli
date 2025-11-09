@@ -2,7 +2,7 @@
 
 import typer
 
-from .commands import artifact, check, config, provider, schema, validate
+from .commands import artifact, check, config, provider, run, schema, validate
 from .commands.history import history_command
 from .commands.init import init_command
 from .commands.list import list_artifacts
@@ -31,6 +31,7 @@ app.command(name="status", help="Show project status")(status_command)
 app.command(name="list", help="List artifacts")(list_artifacts)
 app.command(name="show", help="Show artifact details")(show_artifact)
 app.command(name="history", help="Show project history")(history_command)
+app.command(name="run", help="Execute a loop")(run.run)
 
 
 @app.command()

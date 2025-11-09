@@ -96,9 +96,7 @@ def show(name: str = typer.Argument(..., help="Schema name")) -> None:
 def validate(name: str = typer.Argument(..., help="Schema name")) -> None:
     """Validate a schema file"""
     try:
-        from questfoundry.validators import (  # type: ignore
-            validate_schema as qf_validate_schema,
-        )
+        from questfoundry.validators import validate_schema as qf_validate_schema
 
         is_valid = qf_validate_schema(name)
         if is_valid:

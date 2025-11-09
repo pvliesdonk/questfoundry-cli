@@ -1,0 +1,83 @@
+# All 13 loops from Layer 2 spec (02-dictionary/loop_names.md)
+
+# Discovery loops
+story-spark:
+  display_name: Story Spark
+  abbrev: SS
+  category: Discovery
+  description: Generate initial story concepts and hooks
+
+hook-harvest:
+  display_name: Hook Harvest
+  abbrev: HH
+  category: Discovery
+  description: Generate and collect story hooks
+
+lore-deepening:
+  display_name: Lore Deepening
+  abbrev: LD
+  category: Discovery
+  description: Expand and deepen world lore
+
+# Refinement loops
+codex-expansion:
+  display_name: Codex Expansion
+  abbrev: CE
+  category: Refinement
+  description: Expand codex entries with detail
+
+style-tuneup:
+  display_name: Style Tune-up
+  abbrev: ST
+  category: Refinement
+  description: Polish and align content style
+
+# Asset loops
+art-touchup:
+  display_name: Art Touch-up
+  abbrev: AT
+  category: Asset
+  description: Generate and refine artwork
+
+audio-pass:
+  display_name: Audio Pass
+  abbrev: AP
+  category: Asset
+  description: Generate audio assets
+
+translation-pass:
+  display_name: Translation Pass
+  abbrev: TP
+  category: Asset
+  description: Translate content to other languages
+
+# Export loops
+binding-run:
+  display_name: Binding Run
+  abbrev: BR
+  category: Export
+  description: Generate player-facing views
+
+narration-dry-run:
+  display_name: Narration Dry-Run
+  abbrev: NDR
+  category: Export
+  description: Test narration flow
+
+gatecheck:
+  display_name: Gatecheck
+  abbrev: GC
+  category: Export
+  description: Run quality checks
+
+post-mortem:
+  display_name: Post-Mortem
+  abbrev: PM
+  category: Export
+  description: Analyze and document project outcomes
+
+archive-snapshot:
+  display_name: Archive Snapshot
+  abbrev: AS
+  category: Export
+  description: Create project snapshot for archiving

@@ -663,7 +663,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "questfoundry-py", git = "https://github.com/pvliesdonk/questfoundry-py" },
+    { name = "questfoundry-py", specifier = ">=0.1.0" },
     { name = "questionary", specifier = ">=2.0.0" },
     { name = "rich", specifier = ">=13.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
@@ -675,13 +675,18 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "questfoundry-py"
-version = "0.1.0"
-source = { git = "https://github.com/pvliesdonk/questfoundry-py#f85c4e489df399ef0ed1ca315eb67206d9729be2" }
+version = "0.2.1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "jsonschema" },
     { name = "pydantic" },
     { name = "python-dotenv" },
+    { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9c/da/d26b0b16a92e072c93c45f70e8127631881fc4874c3073f7dea684939d49/questfoundry_py-0.2.1.tar.gz", hash = "sha256:ecfb7e7692abebd024a9f103ca9471613d28037d112c52c9ed9fd9b3c76d8ddb", size = 377264, upload-time = "2025-11-09T07:29:32.044Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ed/22/5d27fcd1b9f1767ed35dd619379ecc01afd14586ea6ca87ffc6c1df9d715/questfoundry_py-0.2.1-py3-none-any.whl", hash = "sha256:0fa6c49e5c953a9175f271ea7bf9a774cb70eb7bf1da155f7cc8e3a72db28f35", size = 515568, upload-time = "2025-11-09T07:29:30.171Z" },
 ]
 
 [[package]]
