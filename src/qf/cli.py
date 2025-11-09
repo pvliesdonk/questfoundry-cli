@@ -3,6 +3,8 @@
 import typer
 
 from .commands import artifact, check, config, generate, provider, run, schema, validate
+from .commands.bind import app as bind_app
+from .commands.export import app as export_app
 from .commands.history import history_command
 from .commands.init import init_command
 from .commands.list import list_artifacts
@@ -26,6 +28,8 @@ app.add_typer(config.app, name="config", help="Manage project configuration")
 app.add_typer(provider.app, name="provider", help="Manage AI providers")
 app.add_typer(check.app, name="check", help="Run quality checks")
 app.add_typer(generate.app, name="generate", help="Generate assets from artifacts")
+app.add_typer(export_app, name="export", help="Export snapshots and views")
+app.add_typer(bind_app, name="bind", help="Bind and render views from snapshots")
 
 # Add project commands
 app.command(name="init", help="Initialize a new project")(init_command)
