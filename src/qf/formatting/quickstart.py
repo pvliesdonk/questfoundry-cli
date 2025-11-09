@@ -62,7 +62,9 @@ def display_showrunner_suggestion(
     console.print()
 
 
-def display_loop_goal(loop_name: str, will_accomplish: list[str], will_not: list[str]) -> None:
+def display_loop_goal(
+    loop_name: str, will_accomplish: list[str], will_not: list[str]
+) -> None:
     """Display loop purpose and scope boundaries.
 
     Args:
@@ -157,7 +159,9 @@ def create_loop_progress_table(
     return table
 
 
-def display_artifact_summary(artifact_count: int, artifact_types: dict[str, int]) -> None:
+def display_artifact_summary(
+    artifact_count: int, artifact_types: dict[str, int]
+) -> None:
     """Display summary of artifacts created during quickstart.
 
     Args:

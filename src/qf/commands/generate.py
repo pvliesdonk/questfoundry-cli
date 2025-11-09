@@ -64,7 +64,9 @@ def load_artifact(artifact_id: str) -> dict[str, Any] | None:
         return None
 
 
-def validate_artifact_type(artifact_id: str, expected_types: list[str]) -> tuple[bool, dict[str, Any] | None]:
+def validate_artifact_type(
+    artifact_id: str, expected_types: list[str]
+) -> tuple[bool, dict[str, Any] | None]:
     """Validate artifact exists and is of correct type."""
     artifact = load_artifact(artifact_id)
     if not artifact:
@@ -112,7 +114,8 @@ def generate_image(
     is_valid, artifact = validate_artifact_type(shotlist_id, ["shotlist", "shot_list"])
     if not is_valid:
         console.print(
-            "\n[cyan]Tip:[/cyan] Run [green]qf list shotlists[/green] to see available shotlists"
+            "\n[cyan]Tip:[/cyan] Run [green]qf list shotlists[/green] "
+            "to see available shotlists"
         )
         raise typer.Exit(1)
 
@@ -153,7 +156,9 @@ def generate_image(
         progress.update(task1, description="[green]✓[/green] Provider initialized")
 
         # Generate image
-        task2 = progress.add_task("Generating image (this may take a moment)...", total=None)
+        task2 = progress.add_task(
+            "Generating image (this may take a moment)...", total=None
+        )
         time.sleep(1.5)
         progress.update(task2, description="[green]✓[/green] Image generated")
 
@@ -213,7 +218,8 @@ def generate_audio(
     )
     if not is_valid:
         console.print(
-            "\n[cyan]Tip:[/cyan] Run [green]qf list cuelists[/green] to see available cuelists"
+            "\n[cyan]Tip:[/cyan] Run [green]qf list cuelists[/green] "
+            "to see available cuelists"
         )
         raise typer.Exit(1)
 
@@ -252,7 +258,9 @@ def generate_audio(
         progress.update(task1, description="[green]✓[/green] Provider initialized")
 
         # Generate audio
-        task2 = progress.add_task("Generating audio (this may take a moment)...", total=None)
+        task2 = progress.add_task(
+            "Generating audio (this may take a moment)...", total=None
+        )
         time.sleep(2.0)
         progress.update(task2, description="[green]✓[/green] Audio generated")
 
@@ -307,7 +315,9 @@ def generate_scene(
     # Validate artifact
     is_valid, artifact = validate_artifact_type(tu_id, ["tu", "turn_unit", "brief"])
     if not is_valid:
-        console.print("\n[cyan]Tip:[/cyan] Run [green]qf list tus[/green] to see available TUs")
+        console.print(
+            "\n[cyan]Tip:[/cyan] Run [green]qf list tus[/green] to see available TUs"
+        )
         raise typer.Exit(1)
 
     # Type narrowing: artifact cannot be None after is_valid check
@@ -370,7 +380,8 @@ def generate_scene(
 
     console.print(
         "\n[cyan]Preview:[/cyan]\n"
-        "[dim]The lamplight flickered as the keeper climbed the spiral stairs...[/dim]\n"
+        "[dim]The lamplight flickered as the keeper climbed "
+        "the spiral stairs...[/dim]\n"
     )
 
 
@@ -398,7 +409,8 @@ def generate_canon(
     is_valid, artifact = validate_artifact_type(hook_id, ["hook", "hook_card"])
     if not is_valid:
         console.print(
-            "\n[cyan]Tip:[/cyan] Run [green]qf list hooks[/green] to see available hooks"
+            "\n[cyan]Tip:[/cyan] Run [green]qf list hooks[/green] "
+            "to see available hooks"
         )
         raise typer.Exit(1)
 
@@ -491,7 +503,10 @@ def generate_images(
         raise typer.Exit(1)
 
     if not pending:
-        console.print("[yellow]Please specify --pending to generate all pending images[/yellow]")
+        console.print(
+            "[yellow]Please specify --pending to generate "
+            "all pending images[/yellow]"
+        )
         raise typer.Exit(1)
 
     # Show batch generation panel
@@ -525,7 +540,7 @@ def generate_images(
         console=console,
     ) as progress:
         task = progress.add_task(
-            "[cyan]Generating 3 images[/cyan]...", total=len(pending_shotlists)
+            "Generating 3 images...", total=len(pending_shotlists)
         )
 
         for i, shotlist_id in enumerate(pending_shotlists, 1):

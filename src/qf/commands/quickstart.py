@@ -25,7 +25,8 @@ def _display_welcome() -> None:
     console.print(
         Panel(
             "[bold cyan]Welcome to QuestFoundry Quickstart![/bold cyan]\n\n"
-            "[cyan]This guided workflow will help you create a new story project[/cyan]\n"
+            "[cyan]This guided workflow will help you create "
+            "a new story project[/cyan]\n"
             "[cyan]and start the creative loops.[/cyan]\n\n"
             "[yellow]Let's begin by answering a few questions.[/yellow]",
             border_style="cyan",
@@ -43,8 +44,10 @@ def _display_completion() -> None:
             "[cyan]Your project has been initialized and loops executed.[/cyan]\n\n"
             "[yellow]Next steps:[/yellow]\n"
             "[cyan]• Review artifacts: [green]qf list[/green][/cyan]\n"
-            "[cyan]• Show artifact details: [green]qf show <artifact-id>[/green][/cyan]\n"
-            "[cyan]• Run additional loops: [green]qf run <loop-name>[/green][/cyan]\n"
+            "[cyan]• Show artifact details: [green]qf show "
+            "<artifact-id>[/green][/cyan]\n"
+            "[cyan]• Run additional loops: [green]qf run "
+            "<loop-name>[/green][/cyan]\n"
             "[cyan]• Check status: [green]qf status[/green][/cyan]",
             border_style="green",
         )
@@ -196,7 +199,8 @@ def quickstart(
     if interactive:
         session.enable_interactive_mode()
         console.print(
-            "[cyan]Interactive mode enabled. Agents may ask questions during loops.[/cyan]\n"
+            "[cyan]Interactive mode enabled. "
+            "Agents may ask questions during loops.[/cyan]\n"
         )
 
     # Main loop execution loop

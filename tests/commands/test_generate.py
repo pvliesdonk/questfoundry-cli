@@ -65,7 +65,9 @@ def shotlist_artifact(temp_project):
         ]
     }
 
-    artifact_file = temp_project / ".questfoundry" / "hot" / "shotlists" / "SHOT-001.json"
+    artifact_file = (
+        temp_project / ".questfoundry" / "hot" / "shotlists" / "SHOT-001.json"
+    )
     artifact_file.write_text(json.dumps(artifact))
 
     return artifact

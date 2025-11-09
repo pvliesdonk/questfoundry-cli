@@ -30,7 +30,10 @@ def format_image_info(image_path: str, width: int = 1024, height: int = 1024) ->
 
 
 def format_audio_info(
-    audio_path: str, duration: str = "3:45", format_type: str = "MP3", bitrate: str = "192kbps"
+    audio_path: str,
+    duration: str = "3:45",
+    format_type: str = "MP3",
+    bitrate: str = "192kbps",
 ) -> Panel:
     """Format audio asset information.
 
@@ -136,7 +139,8 @@ def show_audio_player_instructions(audio_path: str) -> None:
             f"To play the audio, run:\n\n"
             f"[green]afplay {audio_path}[/green] (macOS)\n"
             f"[green]play {audio_path}[/green] (Linux - SoX)\n"
-            f"[green]powershell -Command (New-Object Media.SoundPlayer).PlaySync('{audio_path}')[/green] (Windows)\n",
+            f"[green]powershell -Command (New-Object Media.SoundPlayer)"
+            f".PlaySync('{audio_path}')[/green] (Windows)\n",
             title="[bold cyan]Play Audio[/bold cyan]",
             border_style="cyan",
         )
