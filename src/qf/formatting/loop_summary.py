@@ -9,6 +9,8 @@ from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
 
+from qf.formatting.loop_progress import LoopProgressTracker
+
 console = Console()
 
 
@@ -200,3 +202,73 @@ def suggest_next_loop(current_loop: str) -> str | None:
             # Single option
             return f"Run [green]qf run {next_loop}[/green]"
     return None
+
+
+def display_iteration_summary_panel(tracker: LoopProgressTracker) -> None:
+    """
+    Display iteration summary for multi-iteration loops.
+
+    Shows iteration count, step revisions, and stabilization status.
+
+    Args:
+        tracker: LoopProgressTracker with execution data
+    """
+    if not tracker.is_multi_iteration:
+        return
+
+    text = Text()
+    text.append("Iterations: ", style="bold cyan")
+    text.append(f"{len(tracker.iterations)}", style="cyan")
+
+    total_steps = sum(len(i.steps) for i in tracker.iterations)
+    revised_steps = sum(i.revised_steps for i in tracker.iterations)
+
+    text.append(f"\nTotal steps: {total_steps}", style="cyan")
+
+    if revised_steps > 0:
+        revision_pct = (revised_steps / total_steps * 100) if total_steps > 0 else 0
+        text.append(
+            f"\nRevisions: {revised_steps} ({revision_pct:.0f}%)", style="yellow"
+        )
+
+    text.append("\n")
+    if tracker.stabilized:
+        text.append("Status: ", style="bold")
+        text.append("Stabilized", style="green")
+    else:
+        text.append("Status: ", style="bold")
+        text.append("In Progress", style="yellow")
+
+    console.print()
+    console.print(Panel(text, title="Iteration Summary", border_style="cyan"))
+
+
+def display_revision_details(tracker: LoopProgressTracker) -> None:
+    """
+    Display detailed revision information for multi-iteration loops.
+
+    Shows which steps were revised in each iteration.
+
+    Args:
+        tracker: LoopProgressTracker with execution data
+    """
+    if not tracker.is_multi_iteration or len(tracker.iterations) < 2:
+        return
+
+    tree = Tree("[bold]Revisions by Iteration[/bold]")
+
+    for iteration in tracker.iterations:
+        if iteration.revised_steps > 0:
+            iter_node = tree.add(
+                f"[cyan]Iteration {iteration.iteration_number}[/cyan]"
+            )
+            revised_count = iteration.revised_steps
+            iter_node.add(f"[yellow]{revised_count} steps revised[/yellow]")
+
+            # Show revised step names
+            for step in iteration.steps:
+                if step.is_revision:
+                    iter_node.add(f"  • {step.name}")
+
+    console.print()
+    console.print(tree)

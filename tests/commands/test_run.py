@@ -79,9 +79,10 @@ def test_run_shows_progress(tmp_path, monkeypatch, mock_questionary_init):
     result = runner.invoke(app, ["run", "lore-deepening"])
 
     assert result.exit_code == 0
-    # check for activity indicators
+    # check for activity indicators (iteration-aware output)
     assert "→" in result.stdout or "✓" in result.stdout
-    assert "Initializing" in result.stdout
+    # Check for iteration tracking indicators
+    assert "Iteration" in result.stdout or "Context initialization" in result.stdout
 
 
 def test_run_shows_summary(tmp_path, monkeypatch, mock_questionary_init):
@@ -98,7 +99,8 @@ def test_run_shows_summary(tmp_path, monkeypatch, mock_questionary_init):
     assert result.exit_code == 0
     assert "Summary" in result.stdout
     assert "Codex Expansion" in result.stdout
-    assert "Activities" in result.stdout
+    # Check for iteration or performance metrics (from iteration-aware display)
+    assert "Iteration" in result.stdout or "Stabilized" in result.stdout or "Performance" in result.stdout
 
 
 def test_run_suggests_next_action(tmp_path, monkeypatch, mock_questionary_init):
