@@ -2,10 +2,11 @@
 
 import typer
 
-from .commands import artifact, check, config, provider, run, schema, validate
+from .commands import artifact, check, config, generate, provider, run, schema, validate
 from .commands.history import history_command
 from .commands.init import init_command
 from .commands.list import list_artifacts
+from .commands.quickstart import quickstart
 from .commands.show import show_artifact
 from .commands.status import status_command
 from .utils.formatting import print_header, print_success
@@ -24,6 +25,7 @@ app.add_typer(artifact.app, name="artifact", help="Work with artifacts")
 app.add_typer(config.app, name="config", help="Manage project configuration")
 app.add_typer(provider.app, name="provider", help="Manage AI providers")
 app.add_typer(check.app, name="check", help="Run quality checks")
+app.add_typer(generate.app, name="generate", help="Generate assets from artifacts")
 
 # Add project commands
 app.command(name="init", help="Initialize a new project")(init_command)
@@ -31,6 +33,7 @@ app.command(name="status", help="Show project status")(status_command)
 app.command(name="list", help="List artifacts")(list_artifacts)
 app.command(name="show", help="Show artifact details")(show_artifact)
 app.command(name="history", help="Show project history")(history_command)
+app.command(name="quickstart", help="Start guided quickstart workflow")(quickstart)
 app.command(name="run", help="Execute a loop")(run.run)
 
 
