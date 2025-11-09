@@ -15,6 +15,8 @@ from rich.progress import (
     TimeElapsedColumn,
 )
 
+from qf.formatting.loop_progress import LoopProgressTracker
+
 console = Console()
 
 
@@ -161,3 +163,62 @@ class ActivityTracker:
             "activities": self.activities,
             "total_activities": len(self.activities),
         }
+
+
+def display_loop_iteration_progress(
+    tracker: LoopProgressTracker, current_step: str | None = None
+) -> None:
+    """
+    Display real-time iteration progress for a loop.
+
+    Shows current iteration and step being executed.
+
+    Note: Currently unused. Prepared for future integration with
+    questfoundry-py Showrunner for real-time progress display.
+
+    Args:
+        tracker: LoopProgressTracker with execution data
+        current_step: Optional current step being executed
+    """
+    if not tracker.current_iteration:
+        return
+
+    iteration_num = tracker.current_iteration.iteration_number
+    step_count = len(tracker.current_iteration.steps)
+
+    if current_step:
+        console.print(
+            f"[cyan]→ Iteration {iteration_num}: {current_step}[/cyan]"
+        )
+    else:
+        console.print(
+            f"[cyan]→ Iteration {iteration_num} ({step_count} steps)[/cyan]"
+        )
+
+
+def display_loop_stabilization_status(tracker: LoopProgressTracker) -> None:
+    """
+    Display loop stabilization status.
+
+    Shows whether loop has stabilized and total iteration count.
+
+    Note: Currently unused. Prepared for future integration to display
+    final stabilization status in interactive or streaming modes.
+
+    Args:
+        tracker: LoopProgressTracker with execution data
+    """
+    if tracker.stabilized:
+        iteration_text = (
+            f"in {len(tracker.iterations)} iteration"
+            if len(tracker.iterations) == 1
+            else f"in {len(tracker.iterations)} iterations"
+        )
+        console.print(
+            f"[green]✓ Loop stabilized {iteration_text}[/green]"
+        )
+    elif len(tracker.iterations) > 1:
+        console.print(
+            f"[yellow]⚠ Loop in progress ({len(tracker.iterations)} "
+            f"iterations so far)[/yellow]"
+        )

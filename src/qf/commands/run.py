@@ -8,8 +8,12 @@ import yaml
 from rich.console import Console
 from rich.panel import Panel
 
+from qf.formatting.iterations import (
+    display_efficiency_metrics,
+    display_full_iteration_history,
+)
+from qf.formatting.loop_progress import LoopProgressTracker
 from qf.formatting.loop_summary import display_loop_summary, suggest_next_loop
-from qf.formatting.progress import ActivityTracker
 from qf.utils import WORKSPACE_DIR, find_project_file
 
 console = Console()
@@ -110,36 +114,64 @@ def run(
         "\n[yellow]Note: Full loop execution will integrate with questfoundry-py "
         "Showrunner in a future release.[/yellow]"
     )
-    console.print("[dim]Demonstrating progress tracking and summary display...[/dim]\n")
+    console.print("[dim]Demonstrating multi-iteration progress tracking...[/dim]\n")
 
-    # placeholder execution with progress tracking
-    tracker = ActivityTracker(loop_info['display_name'])
+    # Initialize iteration tracker for multi-iteration support
+    progress_tracker = LoopProgressTracker(loop_name=loop_info['display_name'])
+    progress_tracker.start_loop()
 
-    # simulate loop activities
-    tracker.start_activity("Initializing loop context")
-    time.sleep(0.5)
-    tracker.complete_activity()
+    # Simulate multi-iteration execution
+    # Iteration 1: First pass execution
+    progress_tracker.start_iteration(1)
 
-    tracker.start_activity("Loading project configuration")
-    time.sleep(0.3)
-    tracker.complete_activity()
-
-    tracker.start_activity("Validating workspace")
+    # Simulate steps in iteration 1
+    step1 = progress_tracker.start_step("Context initialization", "Lore Weaver")
     time.sleep(0.2)
-    tracker.complete_activity()
+    progress_tracker.complete_step(step1)
 
-    tracker.start_activity(f"Executing {loop_info['display_name']}")
-    time.sleep(0.5)
-    tracker.complete_activity()
+    step2 = progress_tracker.start_step("Topology analysis", "Plotwright")
+    time.sleep(0.3)
+    progress_tracker.complete_step(step2)
 
-    # display summary
+    step3 = progress_tracker.start_step("Quality validation", "Gatekeeper")
+    time.sleep(0.2)
+    # Simulate quality gate failure
+    progress_tracker.block_step(step3, ["Topology inconsistency detected"])
+
+    progress_tracker.complete_iteration()
+    progress_tracker.record_showrunner_decision("Revising topology analysis (Step 2)")
+
+    # Iteration 2: Revision cycle
+    progress_tracker.start_iteration(2)
+
+    # Revised step (second-pass)
+    step2_revised = progress_tracker.start_step(
+        "Topology analysis (revised)", "Plotwright", is_revision=True
+    )
+    time.sleep(0.25)
+    progress_tracker.complete_step(step2_revised)
+
+    # Re-run quality validation
+    step3_rerun = progress_tracker.start_step("Quality validation", "Gatekeeper")
+    time.sleep(0.2)
+    progress_tracker.complete_step(step3_rerun)
+
+    # Mark as stabilized
+    progress_tracker.mark_stabilized()
+    progress_tracker.complete_iteration()
+
+    # Display iteration history
+    display_full_iteration_history(progress_tracker)
+    display_efficiency_metrics(progress_tracker)
+
+    # Display summary
     next_action = suggest_next_loop(loop_id)
     display_loop_summary(
         loop_name=loop_info['display_name'],
         loop_abbrev=loop_info['abbrev'],
-        duration=tracker.get_duration(),
+        duration=progress_tracker.total_duration,
         tu_id=None,  # will be populated when integrated with Layer 6
         artifacts=[],  # will be populated when integrated with Layer 6
-        activities=tracker.activities,
+        activities=[],
         next_action=next_action,
     )

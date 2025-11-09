@@ -25,10 +25,14 @@ Development guidelines for AI assistants (Claude Code)
 ## Key Rules
 
 1. **Always use conventional commits**
-2. **One feature = one commit**
-3. **Test before committing**
-4. **Type hints required**
-5. **Branch names must include session ID**
+2. **One feature = one commit (minimal commits strategy)**
+3. **One epic = one branch (never reuse branches)**
+4. **Write PR text for each epic** (`.claude/pr-description-epic-N.md`)
+5. **Test before committing** (Tests + Mypy + Ruff all passing)
+6. **Type hints required**
+7. **At least one round of reviews** before marking epic done
+8. **Review feedback must be addressed**
+9. **Branch names must include session ID**
 
 ## Files Structure
 
@@ -65,10 +69,11 @@ Development guidelines for AI assistants (Claude Code)
 - ✅ Epic 4: Validation & Quality
 - ✅ Epic 5: Loop Execution (merged into main)
 - ✅ Epic 6: Asset Generation (merged into main)
-- ✅ Epic 7: Quickstart Workflow (feature branch: claude/epic-7-quickstart-workflow-011CUx9BZKoejEJ7zjNLaJRj)
+- ✅ Epic 7: Quickstart Workflow (merged into main)
 
-**Current**: Epic 7: Quickstart Workflow (COMPLETE)
+**In Progress**:
+- 🔄 Epic 5 Updates: Multi-iteration Loop Tracking (branch: claude/epic-5-iterations-updates-011CUx9BZKoejEJ7zjNLaJRj)
 
-**Progress**: 7/12 epics complete (58%)
+**Progress**: 7/12 epics complete, 1 epic update in progress (58%)
 
 **Next**: Epic 8: Export & Views
