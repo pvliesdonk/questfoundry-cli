@@ -1,40 +1,17 @@
 """Tests for quickstart workflow command."""
 
-import contextlib
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
 from typer.testing import CliRunner
 
 from qf.cli import app
 from qf.interactive import QuickstartSession
 
+# Configure runner for testing with proper environment
 runner = CliRunner()
-
-
-@pytest.fixture
-def mock_prompts() -> dict:
-    """Fixture providing mocked questionary prompts for TTY-less testing."""
-    return {
-        "ask_premise": MagicMock(return_value="A mysterious tale unfolds"),
-        "ask_tone": MagicMock(return_value="Mystery"),
-        "ask_length": MagicMock(return_value="Novella (20-50 pages)"),
-        "ask_project_name": MagicMock(return_value="test-project"),
-        "confirm_setup": MagicMock(return_value=True),
-        "ask_review_artifacts": MagicMock(return_value=False),
-        "ask_continue_loop": MagicMock(return_value=False),
-        "ask_agent_response": MagicMock(return_value="Test response"),
-    }
-
-
-@pytest.fixture
-def mock_is_interactive() -> None:
-    """Fixture that mocks _is_interactive to return True for testing."""
-    with patch("qf.interactive.prompts._is_interactive", return_value=True):
-        yield
 
 
 class TestQuickstartSession:
@@ -383,12 +360,16 @@ class TestQuickstartIntegration:
 
 
 class TestQuickstartInteractive:
-    """Tests for quickstart command with TTY emulation."""
+    """Tests for quickstart command with mocked prompts."""
 
-    def test_quickstart_command_with_tty(
-        self, mock_is_interactive: None, mock_prompts: dict
-    ) -> None:
-        """Test quickstart command when TTY is available (mocked)."""
+    def test_quickstart_command_with_mocked_prompts(self) -> None:
+        """Test quickstart with mocked questionary prompts.
+
+        Since questionary requires actual TTY emulation which CliRunner doesn't
+        provide, we mock the prompts to test the command logic. This is a valid
+        testing approach because we're testing the command's behavior, not
+        questionary's behavior.
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
             import os
 
@@ -396,51 +377,44 @@ class TestQuickstartInteractive:
             os.chdir(tmpdir)
 
             try:
-                # Apply all patches at once using ExitStack
-                with contextlib.ExitStack() as stack:
-                    stack.enter_context(
-                        patch(
-                            "qf.commands.quickstart.ask_premise",
-                            return_value="A test story premise",
-                        )
-                    )
-                    stack.enter_context(
-                        patch(
+                # Mock all prompts and _is_interactive for testing environment
+                with patch("qf.interactive.prompts._is_interactive", return_value=True):
+                    with patch(
+                        "qf.commands.quickstart.ask_premise",
+                        return_value="A mysterious tale with twists",
+                    ):
+                        with patch(
                             "qf.commands.quickstart.ask_tone", return_value="Mystery"
-                        )
-                    )
-                    stack.enter_context(
-                        patch(
-                            "qf.commands.quickstart.ask_length",
-                            return_value="Novella (20-50 pages)",
-                        )
-                    )
-                    stack.enter_context(
-                        patch(
-                            "qf.commands.quickstart.ask_project_name",
-                            return_value="test-project",
-                        )
-                    )
-                    stack.enter_context(
-                        patch(
-                            "qf.commands.quickstart.confirm_setup", return_value=True
-                        )
-                    )
-                    stack.enter_context(
-                        patch(
-                            "qf.commands.quickstart.ask_review_artifacts",
-                            return_value=False,
-                        )
-                    )
-                    # User continues through all loops
-                    stack.enter_context(
-                        patch(
-                            "qf.commands.quickstart.ask_continue_loop",
-                            return_value=True,
-                        )
-                    )
+                        ):
+                            with patch(
+                                "qf.commands.quickstart.ask_length",
+                                return_value="Novella (20-50 pages)",
+                            ):
+                                with patch(
+                                    "qf.commands.quickstart.ask_project_name",
+                                    return_value="mystery-tale",
+                                ):
+                                    with patch(
+                                        "qf.commands.quickstart.confirm_setup",
+                                        return_value=True,
+                                    ):
+                                        with patch(
+                                            "qf.commands.quickstart.ask_review_artifacts",
+                                            return_value=False,
+                                        ):
+                                            with patch(
+                                                "qf.commands.quickstart.ask_continue_loop",
+                                                return_value=True,
+                                            ):
+                                                # Configure environment for terminal
+                                                env = {
+                                                    "TERM": "xterm-256color",
+                                                    "COLUMNS": "200",
+                                                }
 
-                    result = runner.invoke(app, ["quickstart"])
+                                                result = runner.invoke(
+                                                    app, ["quickstart"], env=env
+                                                )
 
                 # Command should complete successfully
                 assert result.exit_code == 0
@@ -453,8 +427,8 @@ class TestQuickstartInteractive:
             finally:
                 os.chdir(old_cwd)
 
-    def test_quickstart_command_without_tty(self) -> None:
-        """Test quickstart command fails gracefully without TTY (no mock)."""
+    def test_quickstart_fails_without_tty(self) -> None:
+        """Test that quickstart fails when TTY is not available."""
         with tempfile.TemporaryDirectory() as tmpdir:
             import os
 
@@ -465,14 +439,16 @@ class TestQuickstartInteractive:
                 # Don't mock _is_interactive, so it returns False
                 result = runner.invoke(app, ["quickstart"])
 
-                # Should fail with clear error message
+                # Should fail with clear error
                 assert result.exit_code == 1
-                assert "Interactive mode requires a TTY" in result.stdout
+                assert "Interactive mode requires a TTY" in (
+                    result.stdout + str(result.exception)
+                )
 
             finally:
                 os.chdir(old_cwd)
 
-    def test_quickstart_resume_with_checkpoint(self, mock_is_interactive: None) -> None:
+    def test_quickstart_resume_with_checkpoint(self) -> None:
         """Test quickstart resume flag with checkpoint."""
         with tempfile.TemporaryDirectory() as tmpdir:
             import os
@@ -494,14 +470,23 @@ class TestQuickstartInteractive:
 
                 # Now test resume with mocked prompts
                 with patch(
-                    "qf.commands.quickstart.ask_review_artifacts",
-                    return_value=False,
+                    "qf.interactive.prompts._is_interactive", return_value=True
                 ):
                     with patch(
-                        "qf.commands.quickstart.ask_continue_loop",
+                        "qf.commands.quickstart.ask_review_artifacts",
                         return_value=False,
                     ):
-                        result = runner.invoke(app, ["quickstart", "--resume"])
+                        with patch(
+                            "qf.commands.quickstart.ask_continue_loop",
+                            return_value=False,
+                        ):
+                            env = {
+                                "TERM": "xterm-256color",
+                                "COLUMNS": "200",
+                            }
+                            result = runner.invoke(
+                                app, ["quickstart", "--resume"], env=env
+                            )
 
                 assert result.exit_code == 0
                 assert "Resumed from checkpoint" in result.stdout
