@@ -75,9 +75,6 @@ def diff_command(
     to_tu: Optional[str] = typer.Option(
         None, "--to", help="Compare to time unit (e.g., tu:2)"
     ),
-    format_type: str = typer.Option(
-        "unified", "--format", help="Diff format (unified, context, side-by-side)"
-    ),
 ) -> None:
     """Compare artifact versions across statuses or snapshots
 
@@ -163,28 +160,22 @@ def diff_command(
         console.print("\n[green]✓ No differences found[/green]\n")
         return
 
-    # Display diff with coloring
+    # Display diff with coloring and calculate statistics
     console.print("\n[bold]Changes:[/bold]\n")
+    added_count = 0
+    removed_count = 0
     for line in diff_lines:
         line = line.rstrip("\n")
         if line.startswith("+") and not line.startswith("+++"):
             console.print(f"[green]{line}[/green]")
+            added_count += 1
         elif line.startswith("-") and not line.startswith("---"):
             console.print(f"[red]{line}[/red]")
+            removed_count += 1
         elif line.startswith("@@"):
             console.print(f"[cyan]{line}[/cyan]")
         else:
             console.print(line)
-
-    # Show statistics
-    added_count = sum(
-        1 for line in diff_lines
-        if line.startswith("+") and not line.startswith("+++")
-    )
-    removed_count = sum(
-        1 for line in diff_lines
-        if line.startswith("-") and not line.startswith("---")
-    )
 
     console.print()
     stats = f"[green]{added_count} added[/green], [red]{removed_count} removed[/red]"

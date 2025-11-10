@@ -142,27 +142,6 @@ class TestDiffOptions:
         )
         assert result.exit_code in [0, 1]  # May succeed or fail gracefully
 
-    def test_diff_output_format_option(self, tmp_path, monkeypatch):
-        """Test diff with different output formats"""
-        monkeypatch.chdir(tmp_path)
-        (tmp_path / ".qfproj").write_text("{}")
-
-        # Create artifact
-        hot_dir = tmp_path / ".questfoundry" / "hot" / "test-type"
-        hot_dir.mkdir(parents=True, exist_ok=True)
-
-        artifact_data = {
-            "id": "test-artifact",
-            "type": "test-type",
-            "content": "Test",
-        }
-        (hot_dir / "test-artifact.json").write_text(json.dumps(artifact_data))
-
-        # Test unified format (default)
-        result = runner.invoke(app, ["diff", "test-artifact", "--format", "unified"])
-        assert result.exit_code == 0
-
-
 class TestDiffCompletion:
     """Tests for diff command completion"""
 

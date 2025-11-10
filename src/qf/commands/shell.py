@@ -19,6 +19,10 @@ class QFShell:
         self.project_file = find_project_file()
         self.running = True
         self.commands_history: list[str] = []
+        # Define available QuestFoundry commands (used in help and validation)
+        self.qf_commands = [
+            "list", "status", "show", "search", "diff", "run", "init", "version", "info"
+        ]
 
     def welcome(self) -> None:
         """Display welcome message"""
@@ -36,7 +40,7 @@ class QFShell:
             return f"qf[{project_name}]> "
         return "qf> "
 
-    def handle_help(self, args: list[str]) -> None:
+    def handle_help(self) -> None:
         """Show help for available commands"""
         console.print()
         console.print("[bold]Available Commands:[/bold]")
@@ -90,7 +94,6 @@ class QFShell:
             return True
 
         command = parts[0].lower()
-        args = parts[1].split() if len(parts) > 1 else []
 
         # Handle built-in shell commands
         if command in ["exit", "quit", "q"]:
@@ -98,7 +101,7 @@ class QFShell:
             return False
 
         if command == "help":
-            self.handle_help(args)
+            self.handle_help()
             return True
 
         if command == "history":
@@ -111,10 +114,7 @@ class QFShell:
 
         # Try to execute as QuestFoundry command
         # For now, show a placeholder message
-        qf_commands = [
-            "list", "status", "show", "search", "diff", "run", "init", "version", "info"
-        ]
-        if command in qf_commands:
+        if command in self.qf_commands:
             # Map shell command to qf command
             console.print(
                 f"[dim]Command '{command}' would be executed as "

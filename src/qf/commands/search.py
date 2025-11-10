@@ -27,6 +27,9 @@ def search_artifacts(
     if not workspace.exists():
         return results
 
+    # Escape query to treat special regex characters as literals
+    escaped_query = re.escape(query)
+
     # Search in hot and cold
     for status in ["hot", "cold"]:
         status_path = workspace / status
@@ -52,12 +55,12 @@ def search_artifacts(
                     # Search in specified field or all fields
                     if field:
                         content = str(artifact.get(field, ""))
-                        if re.search(query, content, re.IGNORECASE):
+                        if re.search(escaped_query, content, re.IGNORECASE):
                             results.append(artifact)
                     else:
                         # Search in all fields
                         artifact_str = json.dumps(artifact)
-                        if re.search(query, artifact_str, re.IGNORECASE):
+                        if re.search(escaped_query, artifact_str, re.IGNORECASE):
                             results.append(artifact)
 
                 except (json.JSONDecodeError, OSError):
@@ -68,9 +71,11 @@ def search_artifacts(
     unique_results: list[dict[str, Any]] = []
     for result in results:
         artifact_id = result.get("id")
-        if artifact_id not in seen_ids:
-            seen_ids.add(artifact_id)
-            unique_results.append(result)
+        # Skip if no ID or if ID already seen
+        if artifact_id is None or artifact_id in seen_ids:
+            continue
+        seen_ids.add(artifact_id)
+        unique_results.append(result)
 
     return unique_results[:limit]
 
@@ -125,13 +130,16 @@ def search_command(
         title = artifact.get("title", "")
         status = artifact.get("status", "unknown")
 
-        # Highlight matches in title
-        if query.lower() in title.lower():
-            title = title.replace(query, f"[bold]{query}[/bold]")
-
-        # Truncate title if too long
+        # Truncate title first (before adding markup)
         if len(title) > 50:
             title = title[:47] + "..."
+
+        # Highlight matches in title (case-insensitive)
+        if query.lower() in title.lower():
+            # Use case-insensitive regex replacement
+            title = re.sub(
+                re.escape(query), f"[bold]{query}[/bold]", title, flags=re.IGNORECASE
+            )
 
         table.add_row(artifact_id, artifact_type, title, status)
 

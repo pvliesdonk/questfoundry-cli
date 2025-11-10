@@ -77,9 +77,6 @@ Development guidelines for AI assistants (Claude Code)
 **In Progress**:
 - 🔄 Epic 10: Advanced Features (branch: claude/epic-10-advanced-features-011CUx9BZKoejEJ7zjNLaJRj)
 
-**Completed (Recent)**:
-- ✅ Epic 9: Shell Completion (merged into main)
+**Progress**: 9/12 epics complete (75%)
 
-**Progress**: 10/12 epics complete (83%)
-
-**Next**: Epic 10: Advanced Features (diff, search, interactive shell)
+**Next**: Merge Epic 10, then proceed to Epic 11 (Documentation & Polish)
