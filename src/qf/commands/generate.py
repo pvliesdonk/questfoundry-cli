@@ -718,45 +718,113 @@ def generate_images(
         )
     )
 
-    # Simulate batch generation
-    console.print(
-        "\n[yellow]Note: Batch generation will integrate with questfoundry-py "
-        "providers in a future release.[/yellow]"
-    )
-    console.print("[dim]Demonstrating progress tracking for multiple images...[/dim]\n")
+    # Real batch generation with questfoundry-py integration
+    if not QUESTFOUNDRY_AVAILABLE:
+        console.print(
+            "\n[red]Error: questfoundry-py is not installed.[/red]\n"
+            "[yellow]Install with:[/yellow] pip install questfoundry-py[openai]"
+        )
+        raise typer.Exit(1)
 
-    # Mock pending shotlists
-    pending_shotlists = ["SHOT-001", "SHOT-002", "SHOT-003"]
+    try:
+        from questfoundry.roles import RoleContext
+        from questfoundry.models import Artifact
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        task = progress.add_task(
-            "Generating 3 images...", total=len(pending_shotlists)
+        # Get workspace and role registry
+        ws = get_workspace()
+        role_registry = get_role_registry()
+
+        # Query workspace for pending shotlists
+        pending_shotlists = ws.list_hot_artifacts(
+            artifact_type="shotlist",
+            filters={"status": "pending"}
         )
 
-        for i, shotlist_id in enumerate(pending_shotlists, 1):
-            progress.update(
-                task,
-                description=f"[cyan]Generating image {i}/{len(pending_shotlists)}: "
-                f"{shotlist_id}[/cyan]",
+        if not pending_shotlists:
+            console.print(
+                "\n[yellow]No pending shotlists found.[/yellow]\n"
+                "[cyan]Tip:[/cyan] Create shotlists with pending status to batch generate."
             )
-            time.sleep(1.0)
-            progress.advance(task)
+            raise typer.Exit(0)
 
-    # Display summary
-    console.print()
-    console.print(
-        Panel(
-            "[green]✓ Batch generation complete[/green]\n\n"
-            "[cyan]Generated:[/cyan] 3 images\n"
-            "[cyan]Path:[/cyan] .questfoundry/assets/images/\n"
-            "[cyan]Total time:[/cyan] 3m 15s",
-            title="[bold green]Batch Generation Complete[/bold green]",
-            border_style="green",
+        console.print(f"\n[cyan]Found {len(pending_shotlists)} pending shotlist(s)[/cyan]\n")
+
+        # Initialize Illustrator role once
+        illustrator = role_registry.get_role("illustrator")
+
+        generated_count = 0
+        failed_count = 0
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task(
+                f"Generating {len(pending_shotlists)} image(s)...",
+                total=len(pending_shotlists),
+            )
+
+            for i, shotlist in enumerate(pending_shotlists, 1):
+                shotlist_id = shotlist.artifact_id or f"shotlist-{i}"
+
+                progress.update(
+                    task,
+                    description=f"[cyan]Generating image {i}/{len(pending_shotlists)}: "
+                    f"{shotlist_id}[/cyan]",
+                )
+
+                try:
+                    context = RoleContext(
+                        task="create_render",
+                        artifacts=[shotlist],
+                        workspace_path=ws.path,
+                        additional_context={
+                            "provider": provider,
+                            "model": model,
+                        },
+                    )
+
+                    result = illustrator.execute_task(context)
+
+                    if result.success:
+                        # Save generated artifacts
+                        for generated_artifact in result.artifacts:
+                            ws.save_hot_artifact(generated_artifact)
+                        generated_count += 1
+                    else:
+                        console.print(
+                            f"\n[red]Failed to generate {shotlist_id}: {result.error}[/red]"
+                        )
+                        failed_count += 1
+
+                except Exception as e:
+                    console.print(f"\n[red]Error generating {shotlist_id}: {e}[/red]")
+                    failed_count += 1
+
+                progress.advance(task)
+
+        # Display summary
+        console.print()
+        console.print(
+            Panel(
+                f"[green]✓ Batch generation complete[/green]\n\n"
+                f"[cyan]Generated:[/cyan] {generated_count} image(s)\n"
+                f"[cyan]Failed:[/cyan] {failed_count}\n"
+                f"[cyan]Location:[/cyan] .questfoundry/hot/",
+                title="[bold green]Batch Generation Complete[/bold green]",
+                border_style="green",
+            )
         )
-    )
+
+    except ImportError as e:
+        console.print(
+            f"\n[red]Error: Failed to import questfoundry-py components: {e}[/red]\n"
+            "[yellow]Install with:[/yellow] pip install questfoundry-py[openai]"
+        )
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"\n[red]Error during batch generation: {e}[/red]")
+        raise typer.Exit(1)
 
     console.print()
