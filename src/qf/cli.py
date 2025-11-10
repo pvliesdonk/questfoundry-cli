@@ -4,11 +4,14 @@ import typer
 
 from .commands import artifact, check, config, generate, provider, run, schema, validate
 from .commands.bind import app as bind_app
+from .commands.diff import diff_command
 from .commands.export import app as export_app
 from .commands.history import history_command
 from .commands.init import init_command
 from .commands.list import list_artifacts
 from .commands.quickstart import quickstart
+from .commands.search import search_command
+from .commands.shell import shell_command
 from .commands.show import show_artifact
 from .commands.status import status_command
 from .utils.formatting import print_header, print_success
@@ -40,6 +43,9 @@ app.command(name="show", help="Show artifact details")(show_artifact)
 app.command(name="history", help="Show project history")(history_command)
 app.command(name="quickstart", help="Start guided quickstart workflow")(quickstart)
 app.command(name="run", help="Execute a loop")(run.run)
+app.command(name="diff", help="Compare artifact versions")(diff_command)
+app.command(name="search", help="Search artifacts")(search_command)
+app.command(name="shell", help="Start interactive shell")(shell_command)
 
 
 @app.command()

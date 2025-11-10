@@ -72,10 +72,11 @@ Development guidelines for AI assistants (Claude Code)
 - ✅ Epic 7: Quickstart Workflow (merged into main)
 - ✅ Epic 5 Updates: Multi-iteration Loop Tracking (merged into main)
 - ✅ Epic 8: Export & Views (merged into main)
+- ✅ Epic 9: Shell Completion (merged into main)
 
 **In Progress**:
-- 🔄 Epic 9: Shell Completion (branch: claude/epic-9-shell-completion-011CUx9BZKoejEJ7zjNLaJRj)
+- 🔄 Epic 10: Advanced Features (branch: claude/epic-10-advanced-features-011CUx9BZKoejEJ7zjNLaJRj)
 
 **Progress**: 9/12 epics complete (75%)
 
-**Next**: Epic 9: Shell Completion
+**Next**: Merge Epic 10, then proceed to Epic 11 (Documentation & Polish)
