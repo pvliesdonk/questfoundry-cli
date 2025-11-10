@@ -579,46 +579,92 @@ def generate_canon(
         )
     )
 
-    # Simulate canonization with progress tracking
-    console.print(
-        "\n[yellow]Note: Canonization will integrate with questfoundry-py "
-        "Lore Weaver role in a future release.[/yellow]"
-    )
-    console.print("[dim]Demonstrating progress tracking...[/dim]\n")
-
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        # Analyze hook
-        task1 = progress.add_task("Analyzing hook potential...", total=None)
-        time.sleep(0.3)
-        progress.update(task1, description="[green]✓[/green] Analysis complete")
-
-        # Generate canon
-        task2 = progress.add_task("Generating canonical world state...", total=None)
-        time.sleep(1.0)
-        progress.update(task2, description="[green]✓[/green] Canon generated")
-
-        # Create canon pack
-        task3 = progress.add_task("Creating canon pack artifact...", total=None)
-        time.sleep(0.3)
-        progress.update(task3, description="[green]✓[/green] Canon pack created")
-
-    # Display result
-    canon_id = f"CANON-{hook_id}"
-    console.print()
-    console.print(
-        Panel(
-            f"[green]✓ Hook canonized successfully[/green]\n\n"
-            f"[cyan]Canon ID:[/cyan] {canon_id}\n"
-            f"[cyan]Canon Type:[/cyan] History Pack\n"
-            f"[cyan]Elements:[/cyan] 7 (people, places, events)",
-            title="[bold green]Canonization Complete[/bold green]",
-            border_style="green",
+    # Real canonization with questfoundry-py integration
+    if not QUESTFOUNDRY_AVAILABLE:
+        console.print(
+            "\n[red]Error: questfoundry-py is not installed.[/red]\n"
+            "[yellow]Install with:[/yellow] pip install questfoundry-py[openai]"
         )
-    )
+        raise typer.Exit(1)
+
+    try:
+        from questfoundry.roles import RoleContext
+        from questfoundry.models import Artifact
+
+        # Get workspace and role registry
+        ws = get_workspace()
+        role_registry = get_role_registry()
+
+        # Convert dict artifact to Artifact model
+        artifact_obj = Artifact(
+            type=artifact.get("type", "hook_card"),
+            data=artifact.get("data", artifact),
+            metadata=artifact.get("metadata", {"id": hook_id}),
+        )
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            # Initialize LoreWeaver role
+            task1 = progress.add_task("Initializing Lore Weaver role...", total=None)
+            lore_weaver = role_registry.get_role("lore_weaver")
+            progress.update(task1, description="[green]✓[/green] Role initialized")
+
+            # Expand canon
+            task2 = progress.add_task("Expanding hook to canonical lore...", total=None)
+
+            context = RoleContext(
+                task="expand_canon",
+                artifacts=[artifact_obj],
+                workspace_path=ws.path,
+                additional_context={
+                    "hook": artifact,
+                    "provider": provider,
+                },
+            )
+
+            result = lore_weaver.execute_task(context)
+
+            if not result.success:
+                progress.stop()
+                console.print(f"\n[red]Error: {result.error}[/red]")
+                raise typer.Exit(1)
+
+            progress.update(task2, description="[green]✓[/green] Canon generated")
+
+            # Save generated artifacts to workspace
+            task3 = progress.add_task("Saving canon pack to workspace...", total=None)
+            for generated_artifact in result.artifacts:
+                ws.save_hot_artifact(generated_artifact)
+            progress.update(task3, description="[green]✓[/green] Canon pack saved")
+
+        # Display result
+        artifact_ids = [a.artifact_id for a in result.artifacts if a.artifact_id]
+        result_path = ".questfoundry/hot/canon/"
+
+        console.print()
+        console.print(
+            Panel(
+                f"[green]✓ Hook canonized successfully[/green]\n\n"
+                f"[cyan]Artifacts:[/cyan] {', '.join(artifact_ids) if artifact_ids else 'Generated'}\n"
+                f"[cyan]Location:[/cyan] {result_path}\n"
+                f"[cyan]Role:[/cyan] Lore Weaver",
+                title="[bold green]Canonization Complete[/bold green]",
+                border_style="green",
+            )
+        )
+
+    except ImportError as e:
+        console.print(
+            f"\n[red]Error: Failed to import questfoundry-py components: {e}[/red]\n"
+            "[yellow]Install with:[/yellow] pip install questfoundry-py[openai]"
+        )
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"\n[red]Error during canonization: {e}[/red]")
+        raise typer.Exit(1)
 
     console.print()
 
