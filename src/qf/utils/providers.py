@@ -79,8 +79,9 @@ def get_role_registry(
     Get or create RoleRegistry.
 
     Args:
-        provider_registry: Optional ProviderRegistry (will be created if not provided)
-        spec_path: Optional path to questfoundry-spec (will be auto-detected if not provided)
+        provider_registry: Optional ProviderRegistry (created if not provided)
+        spec_path: Optional path to questfoundry-spec (auto-detected if
+            not provided)
 
     Returns:
         RoleRegistry instance

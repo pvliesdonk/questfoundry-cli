@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from ..utils.formatting import print_header, print_success
-from ..utils.workspace import get_workspace, QUESTFOUNDRY_AVAILABLE
+from ..utils.workspace import QUESTFOUNDRY_AVAILABLE
 
 console = Console()
 
@@ -29,7 +29,7 @@ def get_author_name() -> str:
         )
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
-    except (subprocess.SubprocessError, FileNotFoundError):
+    except (subprocess.SubprocessError, subprocess.TimeoutExpired, FileNotFoundError):
         pass
 
     # Try environment variables
@@ -65,10 +65,15 @@ def create_project_structure(
         if not config_file.exists():
             template_path = Path(__file__).parent.parent / "templates" / "config.yml"
             if template_path.exists():
-                with open(template_path) as template:
-                    config_content = template.read()
-                with open(config_file, "w") as f:
-                    f.write(config_content)
+                try:
+                    with open(template_path) as template:
+                        config_content = template.read()
+                    with open(config_file, "w") as f:
+                        f.write(config_content)
+                except (IOError, OSError) as e:
+                    console.print(
+                        f"[yellow]Warning: Could not copy config template: {e}[/yellow]"
+                    )
 
     else:
         # Fallback: Legacy directory structure without database
@@ -102,18 +107,26 @@ def create_project_structure(
             },
         }
 
-        with open(project_file, "w") as f:
-            json.dump(metadata, f, indent=2)
+        try:
+            with open(project_file, "w") as f:
+                json.dump(metadata, f, indent=2)
+        except (IOError, OSError) as e:
+            raise RuntimeError(f"Failed to create project metadata file: {e}") from e
 
         # Create default config from template
         config_file = workspace / "config.yml"
         template_path = Path(__file__).parent.parent / "templates" / "config.yml"
 
         if template_path.exists():
-            with open(template_path) as template:
-                config_content = template.read()
-            with open(config_file, "w") as f:
-                f.write(config_content)
+            try:
+                with open(template_path) as template:
+                    config_content = template.read()
+                with open(config_file, "w") as f:
+                    f.write(config_content)
+            except (IOError, OSError) as e:
+                console.print(
+                    f"[yellow]Warning: Could not copy config template: {e}[/yellow]"
+                )
 
 
 def init_command(
@@ -141,7 +154,13 @@ def init_command(
             )
             raise typer.Exit(1)
     else:
-        project_path.mkdir(parents=True, exist_ok=True)
+        try:
+            project_path.mkdir(parents=True, exist_ok=True)
+        except (IOError, OSError) as e:
+            console.print(
+                f"[red]Error: Could not create directory {project_path}: {e}[/red]"
+            )
+            raise typer.Exit(1)
 
     # Prompt for project metadata
     print_header("Initialize QuestFoundry Project")
