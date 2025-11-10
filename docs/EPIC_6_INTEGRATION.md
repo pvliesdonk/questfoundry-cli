@@ -1,12 +1,14 @@
 # Epic 6 Integration: questfoundry-py Integration
 
-## Status: Foundation Complete ✅
+## Status: Generate Commands Complete ✅
 
 This document tracks the integration of questfoundry-py library into the CLI for Epic 6 (Asset Generation).
 
+**Progress:** Phase 1 & 2 complete (11 commits pushed)
+
 ## Completed Work
 
-### Phase 1: Foundation (Complete)
+### Phase 1: Foundation ✅ COMPLETE
 
 #### 1. Workspace Utility Module (`src/qf/utils/workspace.py`)
 - ✅ `find_project_root()` - Locate `.questfoundry` directory
@@ -44,36 +46,56 @@ This document tracks the integration of questfoundry-py library into the CLI for
 - ✅ Verified project metadata is stored correctly in database
 - ✅ Verified hot storage directory structure created properly
 
+### Phase 2: Generate Command Integration ✅ COMPLETE
+
+#### Image Generation (`qf generate image`)
+- ✅ Integrated `Illustrator` role from questfoundry-py
+- ✅ Use `RoleContext` with `create_render` task
+- ✅ Save generated artifacts to workspace via `WorkspaceManager`
+- ✅ Display actual artifact IDs in success message
+- ✅ Removed all placeholder messages and `time.sleep()` simulation
+- ✅ Added proper error handling for missing dependencies
+
+#### Scene Generation (`qf generate scene`)
+- ✅ Integrated `SceneSmith` role from questfoundry-py
+- ✅ Use `RoleContext` with `draft_scene` task
+- ✅ Save generated scene artifacts to workspace
+- ✅ Display actual artifact IDs and prose preview
+- ✅ Removed all placeholder messages and simulation
+- ✅ Added proper error handling
+
+#### Audio Generation (`qf generate audio`)
+- ✅ Integrated `AudioProducer` role from questfoundry-py
+- ✅ Use `RoleContext` with `create_asset` task
+- ✅ Save generated audio artifacts to workspace
+- ✅ Display actual artifact IDs in success message
+- ✅ Removed all placeholder messages and simulation
+- ✅ Added proper error handling
+
+#### Canonization (`qf generate canon`)
+- ✅ Integrated `LoreWeaver` role from questfoundry-py
+- ✅ Use `RoleContext` with `expand_canon` task
+- ✅ Save generated canon pack artifacts to workspace
+- ✅ Display actual artifact IDs in success message
+- ✅ Removed all placeholder messages and simulation
+- ✅ Added proper error handling
+
+#### Batch Image Generation (`qf generate images --pending`)
+- ✅ Query workspace for pending shotlists (replaces hardcoded list)
+- ✅ Use `Illustrator` role for each pending shotlist
+- ✅ Track successful vs failed generations
+- ✅ Save all generated artifacts to workspace
+- ✅ Display summary with success/failure counts
+- ✅ Removed all placeholder messages and simulation
+- ✅ Added per-item error handling
+
+#### Code Cleanup
+- ✅ Removed unused `time` module import
+- ✅ All `time.sleep()` calls replaced with real role execution
+
 ## Next Steps
 
-### Phase 2: Generate Command Integration
-
-#### Image Generation
-- [ ] Update `generate.py` image command to use `Illustrator` role
-- [ ] Replace `time.sleep()` simulation with real role execution
-- [ ] Save generated artifacts to workspace
-- [ ] Update progress display for real generation
-
-#### Scene Generation
-- [ ] Update `generate.py` scene command to use `SceneSmith` role
-- [ ] Integrate with actual scene drafting
-- [ ] Store scenes in workspace
-
-#### Audio Generation
-- [ ] Update `generate.py` audio command to use `AudioProducer` role
-- [ ] Integrate with actual audio generation
-- [ ] Store audio artifacts in workspace
-
-#### Canonization
-- [ ] Update `generate.py` canon command to use `LoreWeaver` role
-- [ ] Integrate with actual canonization
-- [ ] Store canon in workspace
-
-#### Batch Generation
-- [ ] Update batch generation to query workspace for pending artifacts
-- [ ] Invoke appropriate roles for each artifact type
-
-### Phase 3: Status Command Integration
+### Phase 3: Status Command Integration (Recommended)
 - [ ] Update `status.py` to query workspace for active TUs
 - [ ] Show pending artifacts from hot storage
 - [ ] Show recent history from cold storage
@@ -126,10 +148,20 @@ Providers configured in `.questfoundry/config.yml` with environment variable sub
 
 ## Commits
 
+### Phase 1: Foundation (5 commits)
 1. `4eaa2bf` - feat(epic-6): add workspace utility module
 2. `3abcbd7` - feat(epic-6): add providers utility module
 3. `223e0e9` - feat(epic-6): add optional provider dependencies
 4. `c37ac3c` - feat(epic-6): integrate WorkspaceManager into qf init
+5. `e8cd5e6` - docs(epic-6): add integration tracking document
+
+### Phase 2: Generate Commands (6 commits)
+6. `ffc56ac` - feat(epic-6): integrate Illustrator role for real image generation
+7. `0221dbf` - feat(epic-6): integrate Scene Smith role for real scene generation
+8. `9ba5218` - feat(epic-6): integrate Audio Producer role for real audio generation
+9. `c862762` - feat(epic-6): integrate Lore Weaver role for real canonization
+10. `5136c22` - feat(epic-6): integrate batch image generation with workspace queries
+11. `ca9f379` - refactor(epic-6): remove unused time module import
 
 ## Testing Commands
 
