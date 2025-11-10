@@ -393,52 +393,98 @@ def generate_scene(
         )
     )
 
-    # Simulate generation with progress tracking
-    console.print(
-        "\n[yellow]Note: Scene generation will integrate with questfoundry-py "
-        "Scene Smith role in a future release.[/yellow]"
-    )
-    console.print("[dim]Demonstrating progress tracking...[/dim]\n")
-
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        # Prepare context
-        task1 = progress.add_task("Loading TU context and canon...", total=None)
-        time.sleep(0.3)
-        progress.update(task1, description="[green]✓[/green] Context loaded")
-
-        # Generate prose
-        task2 = progress.add_task("Generating scene prose...", total=None)
-        time.sleep(1.2)
-        progress.update(task2, description="[green]✓[/green] Prose generated")
-
-        # Save scene artifact
-        task3 = progress.add_task("Saving scene artifact...", total=None)
-        time.sleep(0.3)
-        progress.update(task3, description="[green]✓[/green] Scene saved")
-
-    # Display result
-    result_id = f"SCENE-{tu_id}"
-    console.print()
-    console.print(
-        Panel(
-            f"[green]✓ Scene prose generated successfully[/green]\n\n"
-            f"[cyan]Scene ID:[/cyan] {result_id}\n"
-            f"[cyan]Word Count:[/cyan] 1,250 (example)\n"
-            f"[cyan]Status:[/cyan] Draft ready for review",
-            title="[bold green]Generation Complete[/bold green]",
-            border_style="green",
+    # Real generation with questfoundry-py integration
+    if not QUESTFOUNDRY_AVAILABLE:
+        console.print(
+            "\n[red]Error: questfoundry-py is not installed.[/red]\n"
+            "[yellow]Install with:[/yellow] pip install questfoundry-py[openai]"
         )
-    )
+        raise typer.Exit(1)
 
-    console.print(
-        "\n[cyan]Preview:[/cyan]\n"
-        "[dim]The lamplight flickered as the keeper climbed "
-        "the spiral stairs...[/dim]\n"
-    )
+    try:
+        from questfoundry.roles import RoleContext
+        from questfoundry.models import Artifact
+
+        # Get workspace and role registry
+        ws = get_workspace()
+        role_registry = get_role_registry()
+
+        # Convert dict artifact to Artifact model
+        artifact_obj = Artifact(
+            type=artifact.get("type", "tu"),
+            data=artifact.get("data", artifact),
+            metadata=artifact.get("metadata", {"id": tu_id}),
+        )
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            # Initialize SceneSmith role
+            task1 = progress.add_task("Initializing Scene Smith role...", total=None)
+            scene_smith = role_registry.get_role("scene_smith")
+            progress.update(task1, description="[green]✓[/green] Role initialized")
+
+            # Generate scene prose
+            task2 = progress.add_task("Generating scene prose...", total=None)
+
+            context = RoleContext(
+                task="draft_scene",
+                artifacts=[artifact_obj],
+                workspace_path=ws.path,
+                additional_context={
+                    "tu": artifact,
+                    "provider": provider,
+                },
+            )
+
+            result = scene_smith.execute_task(context)
+
+            if not result.success:
+                progress.stop()
+                console.print(f"\n[red]Error: {result.error}[/red]")
+                raise typer.Exit(1)
+
+            progress.update(task2, description="[green]✓[/green] Prose generated")
+
+            # Save generated artifacts to workspace
+            task3 = progress.add_task("Saving scene to workspace...", total=None)
+            for generated_artifact in result.artifacts:
+                ws.save_hot_artifact(generated_artifact)
+            progress.update(task3, description="[green]✓[/green] Scene saved")
+
+        # Display result
+        artifact_ids = [a.artifact_id for a in result.artifacts if a.artifact_id]
+        result_path = ".questfoundry/hot/"
+
+        # Extract preview from result output
+        preview = result.output[:150] + "..." if len(result.output) > 150 else result.output
+
+        console.print()
+        console.print(
+            Panel(
+                f"[green]✓ Scene prose generated successfully[/green]\n\n"
+                f"[cyan]Artifacts:[/cyan] {', '.join(artifact_ids) if artifact_ids else 'Generated'}\n"
+                f"[cyan]Location:[/cyan] {result_path}\n"
+                f"[cyan]Role:[/cyan] Scene Smith",
+                title="[bold green]Generation Complete[/bold green]",
+                border_style="green",
+            )
+        )
+
+        if preview:
+            console.print(f"\n[cyan]Preview:[/cyan]\n[dim]{preview}[/dim]\n")
+
+    except ImportError as e:
+        console.print(
+            f"\n[red]Error: Failed to import questfoundry-py components: {e}[/red]\n"
+            "[yellow]Install with:[/yellow] pip install questfoundry-py[openai]"
+        )
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"\n[red]Error during generation: {e}[/red]")
+        raise typer.Exit(1)
 
 
 @app.command(name="canon")
