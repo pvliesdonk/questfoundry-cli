@@ -296,48 +296,94 @@ def generate_audio(
         )
     )
 
-    # Simulate generation with progress tracking
-    console.print(
-        "\n[yellow]Note: Audio generation will integrate with questfoundry-py "
-        "audio providers in a future release.[/yellow]"
-    )
-    console.print("[dim]Demonstrating progress tracking...[/dim]\n")
-
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        # Initialize provider
-        task1 = progress.add_task("Initializing audio provider...", total=None)
-        time.sleep(0.3)
-        progress.update(task1, description="[green]✓[/green] Provider initialized")
-
-        # Generate audio
-        task2 = progress.add_task(
-            "Generating audio (this may take a moment)...", total=None
+    # Real generation with questfoundry-py integration
+    if not QUESTFOUNDRY_AVAILABLE:
+        console.print(
+            "\n[red]Error: questfoundry-py is not installed.[/red]\n"
+            "[yellow]Install with:[/yellow] pip install questfoundry-py[openai]"
         )
-        time.sleep(2.0)
-        progress.update(task2, description="[green]✓[/green] Audio generated")
+        raise typer.Exit(1)
 
-        # Save result
-        task3 = progress.add_task("Saving audio file...", total=None)
-        time.sleep(0.3)
-        progress.update(task3, description="[green]✓[/green] Audio saved")
+    try:
+        from questfoundry.roles import RoleContext
+        from questfoundry.models import Artifact
 
-    # Display result
-    result_path = f".questfoundry/assets/audio/{cuelist_id}.mp3"
-    console.print()
-    console.print(
-        Panel(
-            f"[green]✓ Audio generated successfully[/green]\n\n"
-            f"[cyan]Path:[/cyan] {result_path}\n"
-            f"[cyan]Duration:[/cyan] 3m 45s (example)\n"
-            f"[cyan]Format:[/cyan] MP3 @ 192kbps",
-            title="[bold green]Generation Complete[/bold green]",
-            border_style="green",
+        # Get workspace and role registry
+        ws = get_workspace()
+        role_registry = get_role_registry()
+
+        # Convert dict artifact to Artifact model
+        artifact_obj = Artifact(
+            type=artifact.get("type", "cuelist"),
+            data=artifact.get("data", artifact),
+            metadata=artifact.get("metadata", {"id": cuelist_id}),
         )
-    )
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            # Initialize AudioProducer role
+            task1 = progress.add_task("Initializing Audio Producer role...", total=None)
+            audio_producer = role_registry.get_role("audio_producer")
+            progress.update(task1, description="[green]✓[/green] Role initialized")
+
+            # Generate audio
+            task2 = progress.add_task(
+                "Generating audio (this may take a moment)...", total=None
+            )
+
+            context = RoleContext(
+                task="create_asset",
+                artifacts=[artifact_obj],
+                workspace_path=ws.path,
+                additional_context={
+                    "cuelist": artifact,
+                    "provider": provider,
+                },
+            )
+
+            result = audio_producer.execute_task(context)
+
+            if not result.success:
+                progress.stop()
+                console.print(f"\n[red]Error: {result.error}[/red]")
+                raise typer.Exit(1)
+
+            progress.update(task2, description="[green]✓[/green] Audio generated")
+
+            # Save generated artifacts to workspace
+            task3 = progress.add_task("Saving audio to workspace...", total=None)
+            for generated_artifact in result.artifacts:
+                ws.save_hot_artifact(generated_artifact)
+            progress.update(task3, description="[green]✓[/green] Audio saved")
+
+        # Display result
+        artifact_ids = [a.artifact_id for a in result.artifacts if a.artifact_id]
+        result_path = ".questfoundry/hot/"
+
+        console.print()
+        console.print(
+            Panel(
+                f"[green]✓ Audio generated successfully[/green]\n\n"
+                f"[cyan]Artifacts:[/cyan] {', '.join(artifact_ids) if artifact_ids else 'Generated'}\n"
+                f"[cyan]Location:[/cyan] {result_path}\n"
+                f"[cyan]Role:[/cyan] Audio Producer",
+                title="[bold green]Generation Complete[/bold green]",
+                border_style="green",
+            )
+        )
+
+    except ImportError as e:
+        console.print(
+            f"\n[red]Error: Failed to import questfoundry-py components: {e}[/red]\n"
+            "[yellow]Install with:[/yellow] pip install questfoundry-py[openai]"
+        )
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"\n[red]Error during generation: {e}[/red]")
+        raise typer.Exit(1)
 
     if open_result:
         console.print(
