@@ -1,5 +1,6 @@
 """Main CLI application"""
 
+import sys
 import typer
 
 from .commands import artifact, check, config, generate, provider, run, schema, validate
@@ -14,8 +15,13 @@ from .commands.search import search_command
 from .commands.shell import shell_command
 from .commands.show import show_artifact
 from .commands.status import status_command
+from .logging_config import setup_logging
 from .utils.formatting import print_header, print_success
 from .version import get_version
+
+# Check for verbose flag early and setup logging
+_verbose = "--verbose" in sys.argv or "-v" in sys.argv
+setup_logging(verbose=_verbose)
 
 app = typer.Typer(
     name="qf",
