@@ -89,7 +89,7 @@ qf run hook-harvest
 qf run lore-deepening
 ```
 
-**Note**: Story Spark requires a seed. You can set it in the project config or via the `QUESTFOUNDRY_SEED` environment variable.
+**Note**: Story Spark requires a seed. You can set it in the project config or via the `QUESTFOUNDRY_SEED` environment variable. Loop execution requires `questfoundry-py` to be installed.
 
 **Available Loops:**
 
@@ -216,7 +216,7 @@ qf run codex-expansion
 qf run style-tuneup
 ```
 
-**Requirements**: To execute loops, you need questfoundry-py installed:
+**Requirements**: questfoundry-py is required for loop execution:
 ```bash
 pip install questfoundry-py[openai]
 # Or with all providers
@@ -345,16 +345,7 @@ qf --log-level debug check
 qf --log-level trace run hook-harvest
 ```
 
-### Loop execution requires questfoundry-py
-
-Loop execution uses questfoundry-py's Showrunner to actually update your project. If it's not installed, you'll see a demonstration instead of real execution.
-
-**Solution**: Install questfoundry-py with providers:
-```bash
-pip install questfoundry-py[openai]
-# Or with all providers for local and cloud models
-pip install questfoundry-py[all-providers]
-```
+### Debugging loop execution
 
 To debug loop execution and see what's happening:
 ```bash

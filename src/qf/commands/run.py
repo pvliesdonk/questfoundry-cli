@@ -3,32 +3,14 @@
 import asyncio
 import logging
 import os
-import time
 from pathlib import Path
 
 import typer
 import yaml
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
-
-from qf.formatting.iterations import (
-    display_efficiency_metrics,
-    display_full_iteration_history,
-)
-from qf.formatting.loop_progress import LoopProgressTracker
-from qf.formatting.loop_summary import display_loop_summary, suggest_next_loop
-from qf.utils import WORKSPACE_DIR, find_project_file
-
-try:
-    from questfoundry.orchestration import Showrunner
-    from questfoundry.state import WorkspaceManager
-
-    QUESTFOUNDRY_AVAILABLE = True
-except ImportError:
-    QUESTFOUNDRY_AVAILABLE = False
-    Showrunner = None  # type: ignore
-    WorkspaceManager = None  # type: ignore
+from questfoundry.orchestration import Showrunner
+from questfoundry.state import WorkspaceManager
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -223,38 +205,22 @@ async def _run_async(loop_name: str, interactive: bool) -> None:
     logger.info("Starting loop execution")
     console.print("[dim]Executing loop with questfoundry-py...[/dim]\n")
 
-    # Try to use real questfoundry-py execution
-    if QUESTFOUNDRY_AVAILABLE:
-        try:
-            logger.debug("questfoundry-py is available, attempting real loop execution")
-            await execute_loop_with_showrunner(
-                loop_id, loop_info, workspace, project_file
-            )
-        except Exception as e:
-            logger.error(f"Error executing loop with questfoundry-py: {e}")
-            console.print(
-                f"[yellow]⚠ Loop execution error:[/yellow] {e}\n"
-            )
-            console.print(
-                "[dim]Showing demonstration execution instead...[/dim]\n"
-            )
-            show_demo_execution(loop_info)
-    else:
-        logger.warning("questfoundry-py not available, showing demonstration")
-        console.print(
-            "[yellow]Note:[/yellow] questfoundry-py not installed.\n"
-            "Install with: [green]pip install questfoundry-py[openai][/green]\n"
+    # Execute the loop using questfoundry-py Showrunner
+    try:
+        logger.debug("Executing loop with questfoundry-py Showrunner")
+        await execute_loop_with_showrunner(
+            loop_id, loop_info, workspace, project_file
         )
-        show_demo_execution(loop_info)
+    except Exception as e:
+        logger.error(f"Error executing loop: {e}")
+        console.print(f"[red]Error executing loop:[/red] {e}\n")
+        raise typer.Exit(1)
 
 
 async def execute_loop_with_showrunner(
     loop_id: str, loop_info: dict, workspace: Path, project_file: Path
 ) -> None:
     """Execute a loop using questfoundry-py Showrunner"""
-    from questfoundry.orchestration import Showrunner
-    from questfoundry.state import WorkspaceManager
-
     logger.debug(f"Initializing WorkspaceManager from {workspace}")
     ws = WorkspaceManager(workspace.parent)
 
@@ -287,72 +253,3 @@ async def execute_loop_with_showrunner(
     if result:
         console.print(f"\n[bold]Results:[/bold]")
         console.print(result)
-
-
-def show_demo_execution(loop_info: dict) -> None:
-    """Show demonstration of loop execution"""
-    # Initialize iteration tracker for multi-iteration support
-    progress_tracker = LoopProgressTracker(loop_name=loop_info['display_name'])
-    progress_tracker.start_loop()
-
-    # Simulate multi-iteration execution
-    # Iteration 1: First pass execution
-    progress_tracker.start_iteration(1)
-
-    # Simulate steps in iteration 1
-    step1 = progress_tracker.start_step("Context initialization", "Lore Weaver")
-    time.sleep(0.2)
-    progress_tracker.complete_step(step1)
-
-    step2 = progress_tracker.start_step("Topology analysis", "Plotwright")
-    time.sleep(0.3)
-    progress_tracker.complete_step(step2)
-
-    step3 = progress_tracker.start_step("Quality validation", "Gatekeeper")
-    time.sleep(0.2)
-    # Simulate quality gate failure
-    progress_tracker.block_step(step3, ["Topology inconsistency detected"])
-
-    progress_tracker.complete_iteration()
-    progress_tracker.record_showrunner_decision("Revising topology analysis (Step 2)")
-
-    # Iteration 2: Revision cycle
-    progress_tracker.start_iteration(2)
-
-    # Revised step (second-pass)
-    step2_revised = progress_tracker.start_step(
-        "Topology analysis (revised)", "Plotwright", is_revision=True
-    )
-    time.sleep(0.25)
-    progress_tracker.complete_step(step2_revised)
-
-    # Re-run quality validation
-    step3_rerun = progress_tracker.start_step("Quality validation", "Gatekeeper")
-    time.sleep(0.2)
-    progress_tracker.complete_step(step3_rerun)
-
-    # Mark as stabilized
-    progress_tracker.mark_stabilized()
-    progress_tracker.complete_iteration()
-
-    # Display iteration history
-    display_full_iteration_history(progress_tracker)
-    display_efficiency_metrics(progress_tracker)
-
-    # Display summary
-    loop_id = None
-    for lid, linfo in LOOPS.items():
-        if linfo['display_name'] == loop_info['display_name']:
-            loop_id = lid
-            break
-
-    next_action = suggest_next_loop(loop_id) if loop_id else None
-    display_loop_summary(
-        loop_name=loop_info['display_name'],
-        loop_abbrev=loop_info['abbrev'],
-        duration=progress_tracker.total_duration,
-        tu_id=None,
-        artifacts=[],
-        activities=[],
-        next_action=next_action,
-    )
