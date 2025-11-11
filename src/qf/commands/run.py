@@ -258,11 +258,28 @@ async def execute_loop_with_showrunner(
     logger.debug(f"Initializing WorkspaceManager from {workspace}")
     ws = WorkspaceManager(workspace.parent)
 
+    # Get seed if this is story-spark
+    seed = None
+    if loop_id == "story-spark":
+        seed = validate_story_spark_seed()
+        logger.debug(f"Story Spark seed: {seed[:50] if seed else 'None'}...")
+
     logger.debug(f"Creating Showrunner for loop: {loop_id}")
     showrunner = Showrunner(workspace=ws)
 
     logger.info(f"Executing loop {loop_id} with Showrunner")
-    result = await showrunner.run_loop(loop_id)
+
+    # Execute loop with seed if available
+    try:
+        if seed and loop_id == "story-spark":
+            logger.debug("Executing story-spark with seed")
+            result = await showrunner.run_loop(loop_id, seed=seed)
+        else:
+            result = await showrunner.run_loop(loop_id)
+    except TypeError:
+        # Fallback if seed parameter is not supported
+        logger.debug("Seed parameter not supported, executing without seed")
+        result = await showrunner.run_loop(loop_id)
 
     logger.info(f"Loop execution completed: {loop_id}")
     console.print(f"[green]✓ Loop execution completed[/green]")
