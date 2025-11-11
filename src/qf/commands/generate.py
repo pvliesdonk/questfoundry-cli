@@ -1,7 +1,6 @@
 """Asset generation commands"""
 
 import json
-import time
 from pathlib import Path
 from typing import Any, Optional, cast
 
@@ -12,6 +11,8 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from qf.completions import complete_artifact_ids, complete_provider_names
 from qf.utils import find_project_file
+from qf.utils.providers import get_role_registry
+from qf.utils.workspace import QUESTFOUNDRY_AVAILABLE, get_workspace
 
 console = Console()
 
@@ -85,6 +86,146 @@ def validate_artifact_type(
     return True, artifact
 
 
+def execute_role_generation(
+    role_name: str,
+    task_name: str,
+    artifact_dict: dict[str, Any],
+    artifact_id: str,
+    context_key: str,
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
+    result_path_suffix: str = "",
+) -> None:
+    """
+    Common helper for executing role-based generation.
+
+    Reduces code duplication across generate commands by handling:
+    - Dependency checks
+    - Workspace and role registry initialization
+    - Artifact conversion
+    - Role execution with progress display
+    - Result handling and display
+
+    Args:
+        role_name: Name of the role to execute (e.g., "illustrator")
+        task_name: Task to execute (e.g., "create_render")
+        artifact_dict: Source artifact as dictionary
+        artifact_id: ID of the artifact being processed
+        context_key: Key for additional_context (e.g., "shotlist", "tu")
+        provider: Optional provider name
+        model: Optional model name
+        result_path_suffix: Optional suffix for result path display
+
+    Raises:
+        typer.Exit: On error or missing dependencies
+    """
+    # Check dependency availability
+    if not QUESTFOUNDRY_AVAILABLE:
+        console.print(
+            "\n[red]Error: questfoundry-py is not installed.[/red]\n"
+            "[yellow]Install with:[/yellow] pip install questfoundry-py[openai]"
+        )
+        raise typer.Exit(1)
+
+    try:
+        from questfoundry.models import Artifact
+        from questfoundry.roles import RoleContext
+
+        # Get workspace and role registry
+        ws = get_workspace()
+        role_registry = get_role_registry()
+
+        # Convert dict artifact to Artifact model
+        artifact_obj = Artifact(
+            type=artifact_dict.get("type", context_key),
+            data=artifact_dict.get("data", artifact_dict),
+            metadata=artifact_dict.get("metadata", {"id": artifact_id}),
+        )
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            # Initialize role
+            role_display = role_name.replace("_", " ").title()
+            task1 = progress.add_task(
+                f"Initializing {role_display} role...", total=None
+            )
+            role = role_registry.get_role(role_name)
+            progress.update(
+                task1, description="[green]✓[/green] Role initialized"
+            )
+
+            # Execute generation
+            task2 = progress.add_task(
+                "Generating content (this may take a moment)...", total=None
+            )
+
+            context_data: dict[str, Any] = {context_key: artifact_dict}
+            if provider:
+                context_data["provider"] = provider
+            if model:
+                context_data["model"] = model
+
+            context = RoleContext(
+                task=task_name,
+                artifacts=[artifact_obj],
+                workspace_path=ws.path,
+                additional_context=context_data,
+            )
+
+            result = role.execute_task(context)
+
+            if not result.success:
+                progress.stop()
+                console.print(f"\n[red]Error: {result.error}[/red]")
+                raise typer.Exit(1)
+
+            progress.update(task2, description="[green]✓[/green] Generated")
+
+            # Save generated artifacts to workspace
+            task3 = progress.add_task(
+                "Saving artifacts to workspace...", total=None
+            )
+            # Defensive check for None
+            if result.artifacts:
+                for generated_artifact in result.artifacts:
+                    ws.save_hot_artifact(generated_artifact)
+            progress.update(
+                task3, description="[green]✓[/green] Artifacts saved"
+            )
+
+        # Display result
+        artifact_ids = [
+            a.artifact_id for a in (result.artifacts or []) if a.artifact_id
+        ]
+        result_path = f".questfoundry/hot/{result_path_suffix}"
+
+        console.print()
+        console.print(
+            Panel(
+                f"[green]✓ Generated successfully[/green]\n\n"
+                f"[cyan]Artifacts:[/cyan] "
+                f"{', '.join(artifact_ids) if artifact_ids else 'Generated'}\n"
+                f"[cyan]Location:[/cyan] {result_path}\n"
+                f"[cyan]Role:[/cyan] {role_display}",
+                title="[bold green]Generation Complete[/bold green]",
+                border_style="green",
+            )
+        )
+
+    except ImportError as e:
+        console.print(
+            f"\n[red]Error: Failed to import questfoundry-py: {e}[/red]\n"
+            "[yellow]Install with:[/yellow] pip install questfoundry-py[openai]"
+        )
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"\n[red]Error during generation: {e}[/red]")
+        raise typer.Exit(1)
+
+
 @app.command(name="image")
 def generate_image(
     shotlist_id: str = typer.Argument(
@@ -144,46 +285,16 @@ def generate_image(
         )
     )
 
-    # Simulate generation with progress tracking
-    console.print(
-        "\n[yellow]Note: Image generation will integrate with questfoundry-py "
-        "providers in a future release.[/yellow]"
-    )
-    console.print("[dim]Demonstrating progress tracking...[/dim]\n")
-
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        # Initialize provider
-        task1 = progress.add_task("Initializing provider...", total=None)
-        time.sleep(0.3)
-        progress.update(task1, description="[green]✓[/green] Provider initialized")
-
-        # Generate image
-        task2 = progress.add_task(
-            "Generating image (this may take a moment)...", total=None
-        )
-        time.sleep(1.5)
-        progress.update(task2, description="[green]✓[/green] Image generated")
-
-        # Save result
-        task3 = progress.add_task("Saving image...", total=None)
-        time.sleep(0.3)
-        progress.update(task3, description="[green]✓[/green] Image saved")
-
-    # Display result
-    result_path = f".questfoundry/assets/images/{shotlist_id}.png"
-    console.print()
-    console.print(
-        Panel(
-            f"[green]✓ Image generated successfully[/green]\n\n"
-            f"[cyan]Path:[/cyan] {result_path}\n"
-            f"[cyan]Size:[/cyan] 1024x1024 (example)",
-            title="[bold green]Generation Complete[/bold green]",
-            border_style="green",
-        )
+    # Real generation with questfoundry-py integration
+    execute_role_generation(
+        role_name="illustrator",
+        task_name="create_render",
+        artifact_dict=artifact,
+        artifact_id=shotlist_id,
+        context_key="shotlist",
+        provider=provider,
+        model=model,
+        result_path_suffix="renders/",
     )
 
     if open_result:
@@ -246,47 +357,16 @@ def generate_audio(
         )
     )
 
-    # Simulate generation with progress tracking
-    console.print(
-        "\n[yellow]Note: Audio generation will integrate with questfoundry-py "
-        "audio providers in a future release.[/yellow]"
-    )
-    console.print("[dim]Demonstrating progress tracking...[/dim]\n")
-
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        # Initialize provider
-        task1 = progress.add_task("Initializing audio provider...", total=None)
-        time.sleep(0.3)
-        progress.update(task1, description="[green]✓[/green] Provider initialized")
-
-        # Generate audio
-        task2 = progress.add_task(
-            "Generating audio (this may take a moment)...", total=None
-        )
-        time.sleep(2.0)
-        progress.update(task2, description="[green]✓[/green] Audio generated")
-
-        # Save result
-        task3 = progress.add_task("Saving audio file...", total=None)
-        time.sleep(0.3)
-        progress.update(task3, description="[green]✓[/green] Audio saved")
-
-    # Display result
-    result_path = f".questfoundry/assets/audio/{cuelist_id}.mp3"
-    console.print()
-    console.print(
-        Panel(
-            f"[green]✓ Audio generated successfully[/green]\n\n"
-            f"[cyan]Path:[/cyan] {result_path}\n"
-            f"[cyan]Duration:[/cyan] 3m 45s (example)\n"
-            f"[cyan]Format:[/cyan] MP3 @ 192kbps",
-            title="[bold green]Generation Complete[/bold green]",
-            border_style="green",
-        )
+    # Real generation with questfoundry-py integration
+    execute_role_generation(
+        role_name="audio_producer",
+        task_name="create_asset",
+        artifact_dict=artifact,
+        artifact_id=cuelist_id,
+        context_key="cuelist",
+        provider=provider,
+        model=None,
+        result_path_suffix="audio/",
     )
 
     if open_result:
@@ -343,51 +423,16 @@ def generate_scene(
         )
     )
 
-    # Simulate generation with progress tracking
-    console.print(
-        "\n[yellow]Note: Scene generation will integrate with questfoundry-py "
-        "Scene Smith role in a future release.[/yellow]"
-    )
-    console.print("[dim]Demonstrating progress tracking...[/dim]\n")
-
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        # Prepare context
-        task1 = progress.add_task("Loading TU context and canon...", total=None)
-        time.sleep(0.3)
-        progress.update(task1, description="[green]✓[/green] Context loaded")
-
-        # Generate prose
-        task2 = progress.add_task("Generating scene prose...", total=None)
-        time.sleep(1.2)
-        progress.update(task2, description="[green]✓[/green] Prose generated")
-
-        # Save scene artifact
-        task3 = progress.add_task("Saving scene artifact...", total=None)
-        time.sleep(0.3)
-        progress.update(task3, description="[green]✓[/green] Scene saved")
-
-    # Display result
-    result_id = f"SCENE-{tu_id}"
-    console.print()
-    console.print(
-        Panel(
-            f"[green]✓ Scene prose generated successfully[/green]\n\n"
-            f"[cyan]Scene ID:[/cyan] {result_id}\n"
-            f"[cyan]Word Count:[/cyan] 1,250 (example)\n"
-            f"[cyan]Status:[/cyan] Draft ready for review",
-            title="[bold green]Generation Complete[/bold green]",
-            border_style="green",
-        )
-    )
-
-    console.print(
-        "\n[cyan]Preview:[/cyan]\n"
-        "[dim]The lamplight flickered as the keeper climbed "
-        "the spiral stairs...[/dim]\n"
+    # Real generation with questfoundry-py integration
+    execute_role_generation(
+        role_name="scene_smith",
+        task_name="draft_scene",
+        artifact_dict=artifact,
+        artifact_id=tu_id,
+        context_key="tu",
+        provider=provider,
+        model=None,
+        result_path_suffix="scenes/",
     )
 
 
@@ -437,45 +482,16 @@ def generate_canon(
         )
     )
 
-    # Simulate canonization with progress tracking
-    console.print(
-        "\n[yellow]Note: Canonization will integrate with questfoundry-py "
-        "Lore Weaver role in a future release.[/yellow]"
-    )
-    console.print("[dim]Demonstrating progress tracking...[/dim]\n")
-
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        # Analyze hook
-        task1 = progress.add_task("Analyzing hook potential...", total=None)
-        time.sleep(0.3)
-        progress.update(task1, description="[green]✓[/green] Analysis complete")
-
-        # Generate canon
-        task2 = progress.add_task("Generating canonical world state...", total=None)
-        time.sleep(1.0)
-        progress.update(task2, description="[green]✓[/green] Canon generated")
-
-        # Create canon pack
-        task3 = progress.add_task("Creating canon pack artifact...", total=None)
-        time.sleep(0.3)
-        progress.update(task3, description="[green]✓[/green] Canon pack created")
-
-    # Display result
-    canon_id = f"CANON-{hook_id}"
-    console.print()
-    console.print(
-        Panel(
-            f"[green]✓ Hook canonized successfully[/green]\n\n"
-            f"[cyan]Canon ID:[/cyan] {canon_id}\n"
-            f"[cyan]Canon Type:[/cyan] History Pack\n"
-            f"[cyan]Elements:[/cyan] 7 (people, places, events)",
-            title="[bold green]Canonization Complete[/bold green]",
-            border_style="green",
-        )
+    # Real canonization with questfoundry-py integration
+    execute_role_generation(
+        role_name="lore_weaver",
+        task_name="expand_canon",
+        artifact_dict=artifact,
+        artifact_id=hook_id,
+        context_key="hook",
+        provider=provider,
+        model=None,
+        result_path_suffix="canon/",
     )
 
     console.print()
@@ -530,45 +546,117 @@ def generate_images(
         )
     )
 
-    # Simulate batch generation
-    console.print(
-        "\n[yellow]Note: Batch generation will integrate with questfoundry-py "
-        "providers in a future release.[/yellow]"
-    )
-    console.print("[dim]Demonstrating progress tracking for multiple images...[/dim]\n")
+    # Real batch generation with questfoundry-py integration
+    if not QUESTFOUNDRY_AVAILABLE:
+        console.print(
+            "\n[red]Error: questfoundry-py is not installed.[/red]\n"
+            "[yellow]Install with:[/yellow] pip install questfoundry-py[openai]"
+        )
+        raise typer.Exit(1)
 
-    # Mock pending shotlists
-    pending_shotlists = ["SHOT-001", "SHOT-002", "SHOT-003"]
+    try:
+        from questfoundry.roles import RoleContext
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        task = progress.add_task(
-            "Generating 3 images...", total=len(pending_shotlists)
+        # Get workspace and role registry
+        ws = get_workspace()
+        role_registry = get_role_registry()
+
+        # Query workspace for pending shotlists
+        pending_shotlists = ws.list_hot_artifacts(
+            artifact_type="shotlist",
+            filters={"status": "pending"}
         )
 
-        for i, shotlist_id in enumerate(pending_shotlists, 1):
-            progress.update(
-                task,
-                description=f"[cyan]Generating image {i}/{len(pending_shotlists)}: "
-                f"{shotlist_id}[/cyan]",
+        if not pending_shotlists:
+            console.print(
+                "\n[yellow]No pending shotlists found.[/yellow]\n"
+                "[cyan]Tip:[/cyan] Create shotlists with pending status to "
+                "batch generate."
             )
-            time.sleep(1.0)
-            progress.advance(task)
+            raise typer.Exit(0)
 
-    # Display summary
-    console.print()
-    console.print(
-        Panel(
-            "[green]✓ Batch generation complete[/green]\n\n"
-            "[cyan]Generated:[/cyan] 3 images\n"
-            "[cyan]Path:[/cyan] .questfoundry/assets/images/\n"
-            "[cyan]Total time:[/cyan] 3m 15s",
-            title="[bold green]Batch Generation Complete[/bold green]",
-            border_style="green",
+        console.print(
+            f"\n[cyan]Found {len(pending_shotlists)} pending "
+            f"shotlist(s)[/cyan]\n"
         )
-    )
+
+        # Initialize Illustrator role once
+        illustrator = role_registry.get_role("illustrator")
+
+        generated_count = 0
+        failed_count = 0
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task(
+                f"Generating {len(pending_shotlists)} image(s)...",
+                total=len(pending_shotlists),
+            )
+
+            for i, shotlist in enumerate(pending_shotlists, 1):
+                shotlist_id = shotlist.artifact_id or f"shotlist-{i}"
+
+                progress.update(
+                    task,
+                    description=f"[cyan]Generating image {i}/{len(pending_shotlists)}: "
+                    f"{shotlist_id}[/cyan]",
+                )
+
+                try:
+                    context = RoleContext(
+                        task="create_render",
+                        artifacts=[shotlist],
+                        workspace_path=ws.path,
+                        additional_context={
+                            "provider": provider,
+                            "model": model,
+                        },
+                    )
+
+                    result = illustrator.execute_task(context)
+
+                    if result.success:
+                        # Save generated artifacts
+                        for generated_artifact in result.artifacts:
+                            ws.save_hot_artifact(generated_artifact)
+                        generated_count += 1
+                    else:
+                        console.print(
+                            f"\n[red]Failed to generate {shotlist_id}: "
+                            f"{result.error}[/red]"
+                        )
+                        failed_count += 1
+
+                except Exception as e:
+                    console.print(f"\n[red]Error generating {shotlist_id}: {e}[/red]")
+                    failed_count += 1
+
+                progress.advance(task)
+
+        # Display summary
+        console.print()
+        console.print(
+            Panel(
+                f"[green]✓ Batch generation complete[/green]\n\n"
+                f"[cyan]Generated:[/cyan] {generated_count} image(s)\n"
+                f"[cyan]Failed:[/cyan] {failed_count}\n"
+                f"[cyan]Location:[/cyan] .questfoundry/hot/",
+                title="[bold green]Batch Generation Complete[/bold green]",
+                border_style="green",
+            )
+        )
+
+    except ImportError as e:
+        console.print(
+            f"\n[red]Error: Failed to import questfoundry-py components: {e}[/red]\n"
+            "[yellow]Install with:[/yellow] pip install questfoundry-py[openai]"
+        )
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"\n[red]Error during batch generation: {e}[/red]")
+        raise typer.Exit(1)
 
     console.print()

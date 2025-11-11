@@ -12,7 +12,7 @@ requires-python = ">=3.11"
 authors = [{name = "Peter Liesdonk", email = "peter@liesdonk.nl"}]
 
 dependencies = [
-    "questfoundry-py>=0.1.0",
+    "questfoundry-py>=0.4.0",
     "typer[all]>=0.9.0",
     "rich>=13.0.0",
     "questionary>=2.0.0",
@@ -22,6 +22,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Provider support (OpenAI is most common, but users can choose)
+openai = [
+    "questfoundry-py[openai]>=0.4.0",
+]
+
+# All available providers
+all-providers = [
+    "questfoundry-py[all-providers]>=0.4.0",
+]
+
+# Development dependencies
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
@@ -64,6 +75,18 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+
+# Ignore missing type stubs for third-party libraries
+[[tool.mypy.overrides]]
+module = [
+    "rich.*",
+    "typer.*",
+    "questionary.*",
+    "yaml.*",
+    "click.*",
+    "questfoundry.*",  # v0.4.0 has partial stubs (models only), waiting for complete stubs
+]
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 88

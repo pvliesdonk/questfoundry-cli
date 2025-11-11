@@ -1,6 +1,7 @@
 """Project initialization command"""
 
 import json
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -10,51 +11,122 @@ from rich.console import Console
 from rich.panel import Panel
 
 from ..utils.formatting import print_header, print_success
+from ..utils.workspace import QUESTFOUNDRY_AVAILABLE
 
 console = Console()
 
 
+def get_author_name() -> str:
+    """Get author name from git config or environment"""
+    # Try git config first
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["git", "config", "--get", "user.name"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except (subprocess.SubprocessError, subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+
+    # Try environment variables
+    for env_var in ["USER", "USERNAME", "LOGNAME"]:
+        if value := os.getenv(env_var):
+            return value
+
+    return "unknown"
+
+
 def create_project_structure(
-    project_path: Path, project_name: str, description: str
+    project_path: Path,
+    project_name: str,
+    description: str,
+    author: Optional[str] = None,
+    version: str = "0.1.0",
 ) -> None:
-    """Create project directory structure"""
-    # Create .questfoundry workspace
-    workspace = project_path / ".questfoundry"
-    workspace.mkdir(parents=True, exist_ok=True)
+    """Create project directory structure using WorkspaceManager"""
+    if QUESTFOUNDRY_AVAILABLE:
+        # Use questfoundry-py WorkspaceManager for proper SQLite database initialization
+        from questfoundry.state import WorkspaceManager
 
-    # Create subdirectories
-    (workspace / "hot").mkdir(exist_ok=True)
-    (workspace / "hot" / "hooks").mkdir(exist_ok=True)
-    (workspace / "hot" / "canon").mkdir(exist_ok=True)
-    (workspace / "hot" / "artifacts").mkdir(exist_ok=True)
-    (workspace / "cache").mkdir(exist_ok=True)
-    (workspace / "sessions").mkdir(exist_ok=True)
+        ws = WorkspaceManager(project_path)
+        ws.init_workspace(
+            name=project_name,
+            description=description,
+            version=version,
+            author=author or get_author_name(),
+        )
 
-    # Create project metadata file
-    project_file = project_path / f"{project_name}.qfproj"
-    metadata = {
-        "name": project_name,
-        "description": description,
-        "version": "0.1.0",
-        "created_at": None,  # Will use timestamp when Layer 6 is ready
-        "layers": {
-            "hot": str(workspace / "hot"),
-            "cold": str(project_file),
-        },
-    }
+        # Copy config template if it doesn't exist
+        config_file = project_path / ".questfoundry" / "config.yml"
+        if not config_file.exists():
+            template_path = Path(__file__).parent.parent / "templates" / "config.yml"
+            if template_path.exists():
+                try:
+                    with open(template_path) as template:
+                        config_content = template.read()
+                    with open(config_file, "w") as f:
+                        f.write(config_content)
+                except (IOError, OSError) as e:
+                    console.print(
+                        f"[yellow]Warning: Could not copy config template: {e}[/yellow]"
+                    )
 
-    with open(project_file, "w") as f:
-        json.dump(metadata, f, indent=2)
+    else:
+        # Fallback: Legacy directory structure without database
+        console.print(
+            "[yellow]Warning: questfoundry-py not installed. "
+            "Creating basic structure without database.[/yellow]\n"
+        )
 
-    # Create default config from template
-    config_file = workspace / "config.yml"
-    template_path = Path(__file__).parent.parent / "templates" / "config.yml"
+        # Create .questfoundry workspace
+        workspace = project_path / ".questfoundry"
+        workspace.mkdir(parents=True, exist_ok=True)
 
-    with open(template_path) as template:
-        config_content = template.read()
+        # Create subdirectories
+        (workspace / "hot").mkdir(exist_ok=True)
+        (workspace / "hot" / "hooks").mkdir(exist_ok=True)
+        (workspace / "hot" / "canon").mkdir(exist_ok=True)
+        (workspace / "hot" / "artifacts").mkdir(exist_ok=True)
+        (workspace / "cache").mkdir(exist_ok=True)
+        (workspace / "sessions").mkdir(exist_ok=True)
 
-    with open(config_file, "w") as f:
-        f.write(config_content)
+        # Create legacy JSON metadata file
+        project_file = project_path / f"{project_name}.qfproj"
+        metadata = {
+            "name": project_name,
+            "description": description,
+            "version": version,
+            "author": author or get_author_name(),
+            "layers": {
+                "hot": str(workspace / "hot"),
+                "cold": str(project_file),
+            },
+        }
+
+        try:
+            with open(project_file, "w") as f:
+                json.dump(metadata, f, indent=2)
+        except (IOError, OSError) as e:
+            raise RuntimeError(f"Failed to create project metadata file: {e}") from e
+
+        # Create default config from template
+        config_file = workspace / "config.yml"
+        template_path = Path(__file__).parent.parent / "templates" / "config.yml"
+
+        if template_path.exists():
+            try:
+                with open(template_path) as template:
+                    config_content = template.read()
+                with open(config_file, "w") as f:
+                    f.write(config_content)
+            except (IOError, OSError) as e:
+                console.print(
+                    f"[yellow]Warning: Could not copy config template: {e}[/yellow]"
+                )
 
 
 def init_command(
@@ -75,14 +147,20 @@ def init_command(
             raise typer.Exit(1)
 
         # Check if already initialized
-        if any(project_path.glob("*.qfproj")):
+        if (project_path / ".questfoundry").exists():
             console.print(f"[red]Error: Project already exists in {project_path}[/red]")
             console.print(
-                "[yellow]Tip: Use 'qf open <project.qfproj>' to open it[/yellow]"
+                "[yellow]Tip: Use 'qf status' to see project information[/yellow]"
             )
             raise typer.Exit(1)
     else:
-        project_path.mkdir(parents=True, exist_ok=True)
+        try:
+            project_path.mkdir(parents=True, exist_ok=True)
+        except (IOError, OSError) as e:
+            console.print(
+                f"[red]Error: Could not create directory {project_path}: {e}[/red]"
+            )
+            raise typer.Exit(1)
 
     # Prompt for project metadata
     print_header("Initialize QuestFoundry Project")
@@ -121,10 +199,14 @@ def init_command(
         console.print()
 
         # Show what was created
+        if QUESTFOUNDRY_AVAILABLE:
+            database_info = "[cyan]Database:[/cyan] project.qfproj (SQLite)\n"
+        else:
+            database_info = f"[cyan]Metadata:[/cyan] {project_name}.qfproj (JSON)\n"
+
         panel_content = f"""[cyan]Project:[/cyan] {project_name}
 [cyan]Location:[/cyan] {project_path}
-[cyan]Project file:[/cyan] {project_name}.qfproj
-[cyan]Workspace:[/cyan] .questfoundry/
+{database_info}[cyan]Workspace:[/cyan] .questfoundry/hot/
 
 [bold]Next steps:[/bold]
   1. Run [green]qf status[/green] to see project information

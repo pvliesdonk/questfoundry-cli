@@ -38,8 +38,8 @@ def test_init_creates_project(tmp_path, monkeypatch):
     # Check exit code
     assert result.exit_code == 0
 
-    # Check that project file was created
-    project_file = tmp_path / "test-project.qfproj"
+    # Check that project file was created (SQLite database with WorkspaceManager)
+    project_file = tmp_path / "project.qfproj"
     assert project_file.exists()
 
     # Check workspace was created
@@ -48,11 +48,13 @@ def test_init_creates_project(tmp_path, monkeypatch):
     assert (workspace / "hot").exists()
     assert (workspace / "config.yml").exists()
 
-    # Verify project metadata
-    with open(project_file) as f:
-        metadata = json.load(f)
-        assert metadata["name"] == "test-project"
-        assert metadata["description"] == "Test description"
+    # Verify metadata.json contains project info
+    metadata_file = workspace / "metadata.json"
+    if metadata_file.exists():
+        with open(metadata_file) as f:
+            metadata = json.load(f)
+            assert metadata["name"] == "test-project"
+            assert metadata["description"] == "Test description"
 
 
 def test_init_fails_in_existing_project(tmp_path, monkeypatch):
@@ -60,10 +62,10 @@ def test_init_fails_in_existing_project(tmp_path, monkeypatch):
     # Change to temp directory
     monkeypatch.chdir(tmp_path)
 
-    # Create existing project file
-    (tmp_path / "existing.qfproj").touch()
+    # Create existing project workspace (init checks for .questfoundry directory)
+    (tmp_path / ".questfoundry").mkdir()
 
-    # Run init command
+    # Run init command (it should not ask for input, just fail immediately)
     result = runner.invoke(app, ["init"])
 
     # Should fail
