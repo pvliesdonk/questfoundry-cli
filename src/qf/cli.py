@@ -2,6 +2,7 @@
 
 import sys
 import typer
+from typing import Optional
 
 from .commands import artifact, check, config, generate, provider, run, schema, validate
 from .commands.bind import app as bind_app
@@ -19,13 +20,25 @@ from .logging_config import setup_logging
 from .utils.formatting import print_header, print_success
 from .version import get_version
 
-# Check for verbose flag early and setup logging
-_verbose = "--verbose" in sys.argv or "-v" in sys.argv
-setup_logging(verbose=_verbose)
+# Detect log level from command line arguments
+def _get_log_level() -> str:
+    """Extract log level from command line arguments"""
+    log_level = "info"
+    if "--log-level" in sys.argv:
+        try:
+            idx = sys.argv.index("--log-level")
+            if idx + 1 < len(sys.argv):
+                log_level = sys.argv[idx + 1]
+        except (ValueError, IndexError):
+            pass
+    return log_level
+
+# Setup logging early
+setup_logging(_get_log_level())
 
 app = typer.Typer(
     name="qf",
-    help="QuestFoundry command-line interface",
+    help="QuestFoundry command-line interface for AI-assisted creative writing",
     no_args_is_help=True,
     add_completion=True,
 )
@@ -49,6 +62,7 @@ app.command(name="show", help="Show artifact details")(show_artifact)
 app.command(name="history", help="Show project history")(history_command)
 app.command(name="quickstart", help="Start guided quickstart workflow")(quickstart)
 app.command(name="run", help="Execute a loop")(run.run)
+app.command(name="loops", help="Show all available loops")(run.display_loops_list)
 app.command(name="diff", help="Compare artifact versions")(diff_command)
 app.command(name="search", help="Search artifacts")(search_command)
 app.command(name="shell", help="Start interactive shell")(shell_command)

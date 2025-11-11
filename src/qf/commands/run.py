@@ -35,7 +35,14 @@ LOOPS = _load_loops()
 
 def get_loop_help() -> str:
     """Generate help text listing all available loops by category"""
-    help_text = "Loop to execute. Available loops:\n\n"
+    help_text = "Name of the loop to execute (use 'qf loops' to see all available loops)"
+    return help_text
+
+
+def display_loops_list() -> None:
+    """Display all available loops organized by category"""
+    console.print()
+    console.print("[bold cyan]Available QuestFoundry Loops[/bold cyan]\n")
 
     # Group loops by category
     categories: dict[str, list[tuple[str, dict]]] = {}
@@ -45,17 +52,18 @@ def get_loop_help() -> str:
             categories[category] = []
         categories[category].append((loop_id, loop_info))
 
-    # Format by category
+    # Display by category
     for category in ["Discovery", "Refinement", "Asset", "Export"]:
         if category in categories:
-            help_text += f"  {category}:\n"
+            console.print(f"[bold magenta]{category}:[/bold magenta]")
             for loop_id, loop_info in sorted(categories[category]):
                 display_name = loop_info["display_name"]
+                abbrev = loop_info.get("abbrev", "")
                 desc = loop_info["description"]
-                help_text += f"    {loop_id:20} - {desc}\n"
-            help_text += "\n"
+                console.print(f"  [cyan]{loop_id:20}[/cyan] ({abbrev}) - {desc}")
+            console.print()
 
-    return help_text
+    console.print("[dim]Run a loop with:[/dim] [green]qf run <loop-name>[/green]\n")
 
 
 def validate_loop_name(loop_name: str) -> str:
@@ -120,9 +128,6 @@ def run(
     interactive: bool = typer.Option(
         False, "--interactive", "-i", help="Enable interactive mode (coming soon)"
     ),
-    seed: str | None = typer.Option(
-        None, "--seed", "-s", help="Seed text for story-spark loop (optional)"
-    ),
 ) -> None:
     """Execute a loop"""
     # check if in a project
@@ -144,26 +149,29 @@ def run(
         console.print("[red]Error: Workspace not found[/red]")
         raise typer.Exit(1)
 
-    # Special handling for story-spark: validate seed
+    # Special handling for story-spark: check for seed in config or environment
     if loop_id == "story-spark":
-        # Check for seed from command line, environment, or file
-        story_seed = seed or validate_story_spark_seed()
+        story_seed = validate_story_spark_seed()
         if not story_seed:
             console.print(
-                "[yellow]⚠ Warning: No seed provided for Story Spark[/yellow]"
+                "[yellow]⚠ Story Spark requires a seed[/yellow]"
             )
             console.print(
-                "  Story Spark generates initial story concepts from a seed."
+                "  A seed is a prompt or concept to generate story ideas from."
             )
             console.print(
-                "  Provide a seed with: --seed 'Your story concept' or set "
-                "QUESTFOUNDRY_SEED"
+                "  Set the seed in your project config:"
             )
             console.print(
-                "  Or create .questfoundry/seed.txt with your story concept.\n"
+                "    [green]qf config set story_seed 'Your story concept'[/green]"
             )
-        else:
-            console.print(f"[green]✓ Using seed:[/green] {story_seed}\n")
+            console.print(
+                "  Or set an environment variable:"
+            )
+            console.print(
+                "    [green]export QUESTFOUNDRY_SEED='Your story concept'[/green]\n"
+            )
+            raise typer.Exit(1)
 
     # show warning for interactive mode
     if interactive:
@@ -187,11 +195,7 @@ def run(
     category = loop_info.get("category", "Unknown")
     console.print(f"\n[bold]Category:[/bold] {category}\n")
 
-    console.print(
-        "\n[yellow]Note: Full loop execution will integrate with questfoundry-py "
-        "Showrunner in a future release.[/yellow]"
-    )
-    console.print("[dim]Demonstrating multi-iteration progress tracking...[/dim]\n")
+    console.print("[dim]Executing loop...[/dim]\n")
 
     # Initialize iteration tracker for multi-iteration support
     progress_tracker = LoopProgressTracker(loop_name=loop_info['display_name'])

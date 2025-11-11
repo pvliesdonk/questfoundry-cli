@@ -122,13 +122,3 @@ def list_providers() -> None:
     console.print()
     console.print(table)
     console.print()
-    console.print(
-        "[dim]Note: Provider integration will be fully available "
-        "once Layer 6 is complete.[/dim]\n"
-    )
-    tip_msg = (
-        "[cyan]Tip:[/cyan] Use [green]qf config set "
-        "providers.text.<provider>.api_key <key>[/green] "
-        "to configure a provider\n"
-    )
-    console.print(tip_msg)

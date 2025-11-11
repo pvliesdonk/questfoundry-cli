@@ -5,19 +5,32 @@ import sys
 from typing import Optional
 
 
-def setup_logging(verbose: bool = False) -> None:
+# Map string log levels to logging module levels
+LOG_LEVELS = {
+    "error": logging.ERROR,
+    "warning": logging.WARNING,
+    "info": logging.INFO,
+    "debug": logging.DEBUG,
+    "trace": logging.DEBUG,  # Python doesn't have trace, use debug
+}
+
+
+def setup_logging(log_level: str = "info") -> None:
     """Configure logging for the CLI and questfoundry-py library.
 
     Args:
-        verbose: If True, enable DEBUG level logging for all modules.
-                If False, use INFO level.
+        log_level: Log level as string ('error', 'warning', 'info', 'debug', 'trace')
     """
+    # Normalize log level
+    log_level = log_level.lower()
+    if log_level not in LOG_LEVELS:
+        log_level = "info"
+
+    level = LOG_LEVELS[log_level]
+
     # Set up root logger
     root_logger = logging.getLogger()
-
-    # Determine log level based on verbose flag
-    log_level = logging.DEBUG if verbose else logging.INFO
-    root_logger.setLevel(log_level)
+    root_logger.setLevel(level)
 
     # Remove any existing handlers to avoid duplicates
     for handler in root_logger.handlers[:]:
@@ -25,12 +38,12 @@ def setup_logging(verbose: bool = False) -> None:
 
     # Create console handler with formatter
     handler = logging.StreamHandler(sys.stderr)
-    handler.setLevel(log_level)
+    handler.setLevel(level)
 
-    # Create formatter - simple format for INFO, detailed for DEBUG
-    if verbose:
+    # Create formatter - varies by log level
+    if level == logging.DEBUG:
         formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            "%(asctime)s [%(levelname)s] %(name)s - %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
         )
     else:
@@ -41,12 +54,16 @@ def setup_logging(verbose: bool = False) -> None:
 
     # Configure questfoundry-py logging
     qf_logger = logging.getLogger("questfoundry")
-    qf_logger.setLevel(log_level)
+    qf_logger.setLevel(level)
 
-    # Configure logging for specific noisy third-party libraries (if needed)
-    # These can be set to WARNING to reduce noise
+    # Configure logging for specific noisy third-party libraries
     logging.getLogger("urllib3").setLevel(logging.WARNING)
-    logging.getLogger("openai").setLevel(logging.WARNING if not verbose else logging.INFO)
+    logging.getLogger("openai").setLevel(logging.WARNING if level != logging.DEBUG else logging.INFO)
+
+    # Log that logging is configured
+    logger = logging.getLogger(__name__)
+    if level == logging.DEBUG:
+        logger.debug(f"Logging configured at {log_level.upper()} level")
 
 
 def get_logger(name: str) -> logging.Logger:

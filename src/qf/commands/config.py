@@ -1,5 +1,6 @@
 """Configuration management commands"""
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -262,6 +263,39 @@ def set_config(
         raise typer.Exit(1)
 
 
+def get_auto_configured_providers() -> dict[str, list[str]]:
+    """Get providers that are auto-configured via environment variables"""
+    auto_configured: dict[str, list[str]] = {}
+
+    # Define provider environment variables
+    env_vars = {
+        "text": {
+            "openai": ["OPENAI_API_KEY"],
+            "anthropic": ["ANTHROPIC_API_KEY"],
+            "google": ["GOOGLE_API_KEY"],
+            "cohere": ["COHERE_API_KEY"],
+            "ollama": ["OLLAMA_BASE_URL"],
+        },
+        "image": {
+            "stability": ["STABILITY_API_KEY"],
+            "dalle": ["OPENAI_API_KEY"],
+            "midjourney": ["MIDJOURNEY_API_KEY"],
+            "a1111": ["A1111_BASE_URL"],
+        },
+    }
+
+    for provider_type, providers in env_vars.items():
+        for provider_id, env_var_list in providers.items():
+            for env_var in env_var_list:
+                if os.environ.get(env_var):
+                    if provider_type not in auto_configured:
+                        auto_configured[provider_type] = []
+                    auto_configured[provider_type].append(provider_id)
+                    break
+
+    return auto_configured
+
+
 @app.callback(invoke_without_command=True)
 def config_callback(ctx: typer.Context) -> None:
     """Default behavior for config command - show configuration when no subcommand"""
@@ -271,10 +305,24 @@ def config_callback(ctx: typer.Context) -> None:
     # Otherwise show the configuration (default to list)
     try:
         config = load_config()
-        if not config:
+        tree = Tree("⚙️  Configuration")
+
+        if config:
+            tree = print_config_tree(config, tree)
+
+        # Add auto-configured providers section
+        auto_configured = get_auto_configured_providers()
+        if auto_configured:
+            auto_tree = tree.add("[yellow]Auto-Configured Providers (from environment)[/yellow]")
+            for provider_type in sorted(auto_configured.keys()):
+                type_branch = auto_tree.add(f"[cyan]{provider_type}[/cyan]")
+                for provider_id in sorted(auto_configured[provider_type]):
+                    type_branch.add(f"[green]✓[/green] {provider_id}")
+
+        if not config and not auto_configured:
             console.print("\n[yellow]Configuration is empty[/yellow]\n")
             return
-        tree = print_config_tree(config)
+
         console.print()
         console.print(tree)
         console.print()
