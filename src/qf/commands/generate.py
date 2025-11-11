@@ -162,7 +162,7 @@ def execute_role_generation(
                 "Generating content (this may take a moment)...", total=None
             )
 
-            context_data = {context_key: artifact_dict}
+            context_data: dict[str, Any] = {context_key: artifact_dict}
             if provider:
                 context_data["provider"] = provider
             if model:
@@ -214,9 +214,6 @@ def execute_role_generation(
                 border_style="green",
             )
         )
-
-        # Return result output for preview if needed
-        return result.output
 
     except ImportError as e:
         console.print(

@@ -3,6 +3,7 @@
 import json
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
@@ -11,6 +12,46 @@ from qf.cli import app
 from qf.commands import generate
 
 runner = CliRunner()
+
+
+@pytest.fixture
+def mock_role_execution(monkeypatch):
+    """Mock questfoundry-py role execution for testing."""
+    # Mock successful role execution
+    mock_result = MagicMock()
+    mock_result.success = True
+    mock_result.error = None
+    mock_result.output = "Generated content"
+
+    # Mock artifacts
+    mock_artifact = MagicMock()
+    mock_artifact.artifact_id = "generated-001"
+    mock_result.artifacts = [mock_artifact]
+
+    # Mock role
+    mock_role = MagicMock()
+    mock_role.execute_task.return_value = mock_result
+
+    # Mock role registry
+    mock_registry = MagicMock()
+    mock_registry.get_role.return_value = mock_role
+
+    # Mock workspace
+    mock_workspace = MagicMock()
+    mock_workspace.path = Path("/tmp/test")
+    mock_workspace.save_hot_artifact = MagicMock()
+    mock_workspace.list_hot_artifacts = MagicMock(return_value=[])
+
+    # Patch the utility functions
+    monkeypatch.setattr("qf.commands.generate.get_workspace", lambda: mock_workspace)
+    monkeypatch.setattr("qf.commands.generate.get_role_registry", lambda: mock_registry)
+
+    return {
+        "result": mock_result,
+        "role": mock_role,
+        "registry": mock_registry,
+        "workspace": mock_workspace,
+    }
 
 
 @pytest.fixture
@@ -169,15 +210,15 @@ def test_generate_image_wrong_artifact_type(temp_project, tu_artifact):
     assert "Expected artifact type" in result.stdout
 
 
-def test_generate_image_success(temp_project, shotlist_artifact):
+def test_generate_image_success(temp_project, shotlist_artifact, mock_role_execution):
     """Test successful image generation."""
     result = runner.invoke(app, ["generate", "image", "SHOT-001"])
     assert result.exit_code == 0
-    assert "Image generated successfully" in result.stdout
+    assert "Generated successfully" in result.stdout
     assert "SHOT-001" in result.stdout
 
 
-def test_generate_image_with_provider(temp_project, shotlist_artifact):
+def test_generate_image_with_provider(temp_project, shotlist_artifact, mock_role_execution):
     """Test image generation with provider override."""
     result = runner.invoke(
         app, ["generate", "image", "SHOT-001", "--provider", "dalle"]
@@ -186,7 +227,7 @@ def test_generate_image_with_provider(temp_project, shotlist_artifact):
     assert "Provider: dalle" in result.stdout
 
 
-def test_generate_image_with_model(temp_project, shotlist_artifact):
+def test_generate_image_with_model(temp_project, shotlist_artifact, mock_role_execution):
     """Test image generation with model override."""
     result = runner.invoke(
         app, ["generate", "image", "SHOT-001", "--model", "dall-e-3"]
@@ -195,7 +236,7 @@ def test_generate_image_with_model(temp_project, shotlist_artifact):
     assert "Model: dall-e-3" in result.stdout
 
 
-def test_generate_image_with_provider_and_model(temp_project, shotlist_artifact):
+def test_generate_image_with_provider_and_model(temp_project, shotlist_artifact, mock_role_execution):
     """Test image generation with both provider and model."""
     result = runner.invoke(
         app,
@@ -235,14 +276,14 @@ def test_generate_audio_wrong_artifact_type(temp_project, shotlist_artifact):
     assert "Expected artifact type" in result.stdout
 
 
-def test_generate_audio_success(temp_project, cuelist_artifact):
+def test_generate_audio_success(temp_project, cuelist_artifact, mock_role_execution):
     """Test successful audio generation."""
     result = runner.invoke(app, ["generate", "audio", "CUE-001"])
     assert result.exit_code == 0
-    assert "Audio generated successfully" in result.stdout
+    assert "Generated successfully" in result.stdout
 
 
-def test_generate_audio_with_provider(temp_project, cuelist_artifact):
+def test_generate_audio_with_provider(temp_project, cuelist_artifact, mock_role_execution):
     """Test audio generation with provider override."""
     result = runner.invoke(
         app, ["generate", "audio", "CUE-001", "--provider", "elevenlabs"]
@@ -280,14 +321,14 @@ def test_generate_scene_wrong_artifact_type(temp_project, hook_artifact):
     assert "Expected artifact type" in result.stdout
 
 
-def test_generate_scene_success(temp_project, tu_artifact):
+def test_generate_scene_success(temp_project, tu_artifact, mock_role_execution):
     """Test successful scene generation."""
     result = runner.invoke(app, ["generate", "scene", "TU-001"])
     assert result.exit_code == 0
-    assert "Scene prose generated successfully" in result.stdout
+    assert "Generated successfully" in result.stdout
 
 
-def test_generate_scene_with_provider(temp_project, tu_artifact):
+def test_generate_scene_with_provider(temp_project, tu_artifact, mock_role_execution):
     """Test scene generation with provider override."""
     result = runner.invoke(
         app, ["generate", "scene", "TU-001", "--provider", "openai"]
@@ -325,14 +366,14 @@ def test_generate_canon_wrong_artifact_type(temp_project, tu_artifact):
     assert "Expected artifact type" in result.stdout
 
 
-def test_generate_canon_success(temp_project, hook_artifact):
+def test_generate_canon_success(temp_project, hook_artifact, mock_role_execution):
     """Test successful canonization."""
     result = runner.invoke(app, ["generate", "canon", "HOOK-001"])
     assert result.exit_code == 0
-    assert "Hook canonized successfully" in result.stdout
+    assert "Generated successfully" in result.stdout
 
 
-def test_generate_canon_with_provider(temp_project, hook_artifact):
+def test_generate_canon_with_provider(temp_project, hook_artifact, mock_role_execution):
     """Test canonization with provider override."""
     result = runner.invoke(
         app, ["generate", "canon", "HOOK-001", "--provider", "openai"]
@@ -363,16 +404,37 @@ def test_generate_images_batch_no_pending_flag(temp_project):
     assert "Please specify --pending" in result.stdout
 
 
-def test_generate_images_batch_success(temp_project):
+def test_generate_images_batch_success(temp_project, mock_role_execution):
     """Test successful batch image generation."""
+    # Mock workspace to return pending shotlists as Artifact-like objects
+    mock_workspace = mock_role_execution["workspace"]
+
+    # Create mock artifacts with proper attributes
+    mock_shotlists = []
+    for i in range(1, 4):
+        mock_shotlist = MagicMock()
+        mock_shotlist.artifact_id = f"SHOT-00{i}"
+        mock_shotlist.type = "shotlist"
+        mock_shotlists.append(mock_shotlist)
+
+    mock_workspace.list_hot_artifacts.return_value = mock_shotlists
+
     result = runner.invoke(app, ["generate", "images", "--pending"])
     assert result.exit_code == 0
     assert "Batch generation complete" in result.stdout
-    assert "Generated: 3 images" in result.stdout
+    assert "Generated: 3 image(s)" in result.stdout
 
 
-def test_generate_images_batch_with_provider(temp_project):
+def test_generate_images_batch_with_provider(temp_project, mock_role_execution):
     """Test batch image generation with provider override."""
+    # Mock workspace to return pending shotlists as Artifact-like objects
+    mock_workspace = mock_role_execution["workspace"]
+
+    mock_shotlist = MagicMock()
+    mock_shotlist.artifact_id = "SHOT-001"
+    mock_shotlist.type = "shotlist"
+    mock_workspace.list_hot_artifacts.return_value = [mock_shotlist]
+
     result = runner.invoke(
         app, ["generate", "images", "--pending", "--provider", "midjourney"]
     )
@@ -380,8 +442,16 @@ def test_generate_images_batch_with_provider(temp_project):
     assert "Provider: midjourney" in result.stdout
 
 
-def test_generate_images_batch_with_provider_and_model(temp_project):
+def test_generate_images_batch_with_provider_and_model(temp_project, mock_role_execution):
     """Test batch image generation with both provider and model."""
+    # Mock workspace to return pending shotlists as Artifact-like objects
+    mock_workspace = mock_role_execution["workspace"]
+
+    mock_shotlist = MagicMock()
+    mock_shotlist.artifact_id = "SHOT-001"
+    mock_shotlist.type = "shotlist"
+    mock_workspace.list_hot_artifacts.return_value = [mock_shotlist]
+
     result = runner.invoke(
         app,
         [

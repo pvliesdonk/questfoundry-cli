@@ -76,6 +76,18 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 
+# Ignore missing type stubs for third-party libraries
+[[tool.mypy.overrides]]
+module = [
+    "rich.*",
+    "typer.*",
+    "questionary.*",
+    "yaml.*",
+    "click.*",
+    "questfoundry.*",
+]
+ignore_missing_imports = true
+
 [tool.ruff]
 line-length = 88
 target-version = "py311"
