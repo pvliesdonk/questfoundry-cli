@@ -1,5 +1,6 @@
 """Loop execution commands"""
 
+import logging
 import os
 import time
 from pathlib import Path
@@ -19,6 +20,7 @@ from qf.formatting.loop_summary import display_loop_summary, suggest_next_loop
 from qf.utils import WORKSPACE_DIR, find_project_file
 
 console = Console()
+logger = logging.getLogger(__name__)
 
 
 def _load_loops() -> dict[str, dict[str, str]]:
@@ -140,8 +142,10 @@ def run(
         raise typer.Exit(1)
 
     # validate loop name
+    logger.debug(f"Validating loop name: {loop_name}")
     loop_id = validate_loop_name(loop_name)
     loop_info = LOOPS[loop_id]
+    logger.info(f"Executing loop: {loop_id} ({loop_info['display_name']})")
 
     # check workspace exists
     workspace = Path(WORKSPACE_DIR)
@@ -149,10 +153,13 @@ def run(
         console.print("[red]Error: Workspace not found[/red]")
         raise typer.Exit(1)
 
+    logger.debug(f"Workspace found at: {workspace.absolute()}")
+
     # Special handling for story-spark: check for seed in config or environment
     if loop_id == "story-spark":
         story_seed = validate_story_spark_seed()
         if not story_seed:
+            logger.warning("Story Spark requires a seed but none was found")
             console.print(
                 "[yellow]⚠ Story Spark requires a seed[/yellow]"
             )
@@ -172,6 +179,7 @@ def run(
                 "    [green]export QUESTFOUNDRY_SEED='Your story concept'[/green]\n"
             )
             raise typer.Exit(1)
+        logger.debug(f"Story Spark seed found (length: {len(story_seed)} chars)")
 
     # show warning for interactive mode
     if interactive:
@@ -195,7 +203,10 @@ def run(
     category = loop_info.get("category", "Unknown")
     console.print(f"\n[bold]Category:[/bold] {category}\n")
 
-    console.print("[dim]Executing loop...[/dim]\n")
+    console.print("[yellow]⚠ Note: This is a simulation/demo[/yellow]")
+    console.print("Full loop execution with file updates requires Layer 6 integration.\n")
+    logger.info("Starting loop execution (simulation mode)")
+    console.print("[dim]Running loop simulation...[/dim]\n")
 
     # Initialize iteration tracker for multi-iteration support
     progress_tracker = LoopProgressTracker(loop_name=loop_info['display_name'])

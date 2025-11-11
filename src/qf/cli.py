@@ -83,5 +83,51 @@ def info() -> None:
     typer.echo("Documentation: https://github.com/pvliesdonk/questfoundry-spec")
 
 
+@app.command()
+def help_categories() -> None:
+    """Show commands organized by category"""
+    console = __import__("rich.console", fromlist=["Console"]).Console()
+
+    console.print()
+    console.print("[bold cyan]Project Management[/bold cyan]")
+    console.print("  [green]init[/green]       - Initialize a new project")
+    console.print("  [green]status[/green]     - Show project status")
+    console.print("  [green]config[/green]     - Manage project configuration")
+
+    console.print("\n[bold cyan]Loop Execution (Core Workflow)[/bold cyan]")
+    console.print("  [green]loops[/green]      - Show all available loops")
+    console.print("  [green]run[/green]        - Execute a loop")
+
+    console.print("\n[bold cyan]Artifact Management[/bold cyan]")
+    console.print("  [green]list[/green]       - List all artifacts")
+    console.print("  [green]show[/green]       - Show artifact details")
+    console.print("  [green]artifact[/green]   - Work with artifacts (create, info, etc.)")
+    console.print("  [green]search[/green]     - Search artifacts")
+    console.print("  [green]diff[/green]       - Compare artifact versions")
+    console.print("  [green]history[/green]    - Show project history")
+
+    console.print("\n[bold cyan]Schema & Validation[/bold cyan]")
+    console.print("  [green]schema[/green]     - Manage schemas (list, show, validate)")
+    console.print("  [green]validate[/green]   - Validate artifacts and envelopes")
+    console.print("  [green]check[/green]      - Run quality checks")
+
+    console.print("\n[bold cyan]Providers[/bold cyan]")
+    console.print("  [green]provider[/green]   - Manage AI providers")
+
+    console.print("\n[bold cyan]Export & Generation[/bold cyan]")
+    console.print("  [green]generate[/green]   - Generate assets from artifacts")
+    console.print("  [green]export[/green]     - Export snapshots and views")
+    console.print("  [green]bind[/green]       - Bind and render views from snapshots")
+
+    console.print("\n[bold cyan]Other[/bold cyan]")
+    console.print("  [green]quickstart[/green] - Start guided quickstart workflow")
+    console.print("  [green]shell[/green]      - Start interactive shell")
+    console.print("  [green]version[/green]    - Show version information")
+    console.print("  [green]info[/green]       - Show QuestFoundry information")
+    console.print()
+    console.print("[dim]Use 'qf <command> --help' for more information about a command[/dim]")
+    console.print("[dim]Use 'qf --log-level debug <command>' for debugging[/dim]\n")
+
+
 if __name__ == "__main__":
     app()

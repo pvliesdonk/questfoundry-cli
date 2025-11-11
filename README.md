@@ -74,12 +74,12 @@ QuestFoundry uses "loops" - guided workflows that leverage AI at different stage
 
 ```bash
 # See all available loops
-qf run --help
+qf loops
+
+# For Story Spark, first set a seed (in project config)
+qf config set story_seed "A detective discovers a hidden civilization"
 
 # Start with Story Spark (initial concept generation)
-qf run story-spark --seed "A detective discovers a hidden civilization"
-
-# Or without a seed (you'll be warned)
 qf run story-spark
 
 # Continue with Hook Harvest to develop story hooks
@@ -88,6 +88,8 @@ qf run hook-harvest
 # Deepen your world lore
 qf run lore-deepening
 ```
+
+**Note**: Story Spark requires a seed. You can set it in the project config or via the `QUESTFOUNDRY_SEED` environment variable.
 
 **Available Loops:**
 
@@ -131,17 +133,21 @@ qf check
 qf check --verbose
 ```
 
-### 5. Enable Verbose Logging
+### 5. Enable Logging for Debugging
 
-For debugging and understanding system behavior:
+Control logging levels to understand system behavior:
 
 ```bash
-# Enable verbose output for any command
-qf --verbose run story-spark
+# Set log level for any command (error, warning, info, debug, trace)
+qf --log-level debug run story-spark
+qf --log-level info check
 
-# Or set up logging in individual commands
-qf --verbose status
-qf --verbose config
+# Common log levels:
+#   error   - Only show errors
+#   warning - Show warnings and errors
+#   info    - Show informational messages (default)
+#   debug   - Show detailed debug information
+#   trace   - Maximum verbosity (same as debug in Python)
 ```
 
 ## Configuration
@@ -195,16 +201,22 @@ qf show <artifact-id>
 ### Loop Execution (Core Workflow)
 
 ```bash
-# Execute a loop with optional seed
-qf run <loop-name> [--seed "Your seed text"] [--interactive]
+# List all available loops with descriptions
+qf loops
 
-# Example loops
-qf run story-spark --seed "A hidden kingdom beneath the sea"
+# Execute a loop
+qf run <loop-name> [--interactive]
+
+# Example loops (configure seed in config for story-spark)
+qf config set story_seed "A hidden kingdom beneath the sea"
+qf run story-spark
 qf run hook-harvest
 qf run lore-deepening
 qf run codex-expansion
 qf run style-tuneup
 ```
+
+**Note**: Currently, loop execution runs in simulation/demo mode. Full file updates and project changes require Layer 6 integration with questfoundry-py's Showrunner.
 
 ### Schema Management
 
@@ -317,12 +329,22 @@ chcp 65001
 set PYTHONIOENCODING=utf-8
 ```
 
-### Verbose logging for debugging
+### Enabling debug logging
 
-Enable verbose mode to see detailed logs from questfoundry-py:
+Enable debug logging to see detailed logs from questfoundry-cli and questfoundry-py:
 ```bash
-qf --verbose run story-spark
-qf --verbose check
+qf --log-level debug run story-spark
+qf --log-level debug check
+qf --log-level trace run hook-harvest
+```
+
+### Loop execution doesn't seem to do anything
+
+Loop execution is currently in simulation/demo mode. Full file updates and project changes require Layer 6 integration with questfoundry-py's Showrunner, which is coming in a future release.
+
+To debug loop execution:
+```bash
+qf --log-level debug run story-spark
 ```
 
 ## Development
