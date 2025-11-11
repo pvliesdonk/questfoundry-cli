@@ -1,5 +1,6 @@
 """Loop execution commands"""
 
+import os
 import time
 from pathlib import Path
 
@@ -7,6 +8,7 @@ import typer
 import yaml
 from rich.console import Console
 from rich.panel import Panel
+from rich.table import Table
 
 from qf.formatting.iterations import (
     display_efficiency_metrics,
@@ -22,13 +24,38 @@ console = Console()
 def _load_loops() -> dict[str, dict[str, str]]:
     """Load loop definitions from YAML configuration file."""
     loops_file = Path(__file__).parent.parent / "data" / "loops.yml"
-    with open(loops_file, "r") as f:
+    with open(loops_file, "r", encoding="utf-8") as f:
         loops = yaml.safe_load(f)
         return loops if loops is not None else {}
 
 
 # All 13 loops from Layer 2 spec (02-dictionary/loop_names.md)
 LOOPS = _load_loops()
+
+
+def get_loop_help() -> str:
+    """Generate help text listing all available loops by category"""
+    help_text = "Loop to execute. Available loops:\n\n"
+
+    # Group loops by category
+    categories: dict[str, list[tuple[str, dict]]] = {}
+    for loop_id, loop_info in LOOPS.items():
+        category = loop_info.get("category", "Other")
+        if category not in categories:
+            categories[category] = []
+        categories[category].append((loop_id, loop_info))
+
+    # Format by category
+    for category in ["Discovery", "Refinement", "Asset", "Export"]:
+        if category in categories:
+            help_text += f"  {category}:\n"
+            for loop_id, loop_info in sorted(categories[category]):
+                display_name = loop_info["display_name"]
+                desc = loop_info["description"]
+                help_text += f"    {loop_id:20} - {desc}\n"
+            help_text += "\n"
+
+    return help_text
 
 
 def validate_loop_name(loop_name: str) -> str:
@@ -67,10 +94,34 @@ def validate_loop_name(loop_name: str) -> str:
     raise typer.Exit(1)
 
 
+def validate_story_spark_seed() -> str | None:
+    """
+    Validate that a seed is available for story-spark loop.
+
+    Returns:
+        Seed text if available, None if not configured
+    """
+    # Check for seed in environment variable or config
+    seed = os.environ.get("QUESTFOUNDRY_SEED")
+    if seed:
+        return seed
+
+    # Check for seed file in workspace
+    seed_file = Path(".questfoundry") / "seed.txt"
+    if seed_file.exists():
+        with open(seed_file, encoding="utf-8") as f:
+            return f.read().strip()
+
+    return None
+
+
 def run(
-    loop_name: str = typer.Argument(..., help="Loop name to execute"),
+    loop_name: str = typer.Argument(..., help=get_loop_help()),
     interactive: bool = typer.Option(
         False, "--interactive", "-i", help="Enable interactive mode (coming soon)"
+    ),
+    seed: str | None = typer.Option(
+        None, "--seed", "-s", help="Seed text for story-spark loop (optional)"
     ),
 ) -> None:
     """Execute a loop"""
@@ -93,6 +144,27 @@ def run(
         console.print("[red]Error: Workspace not found[/red]")
         raise typer.Exit(1)
 
+    # Special handling for story-spark: validate seed
+    if loop_id == "story-spark":
+        # Check for seed from command line, environment, or file
+        story_seed = seed or validate_story_spark_seed()
+        if not story_seed:
+            console.print(
+                "[yellow]⚠ Warning: No seed provided for Story Spark[/yellow]"
+            )
+            console.print(
+                "  Story Spark generates initial story concepts from a seed."
+            )
+            console.print(
+                "  Provide a seed with: --seed 'Your story concept' or set "
+                "QUESTFOUNDRY_SEED"
+            )
+            console.print(
+                "  Or create .questfoundry/seed.txt with your story concept.\n"
+            )
+        else:
+            console.print(f"[green]✓ Using seed:[/green] {story_seed}\n")
+
     # show warning for interactive mode
     if interactive:
         console.print(
@@ -100,7 +172,8 @@ def run(
             "in a future release.[/yellow]\n"
         )
 
-    # execute loop with progress tracking
+    # Display loop and roles prominently
+    console.print()
     console.print(
         Panel(
             f"[bold cyan]{loop_info['display_name']}[/bold cyan]\n"
@@ -109,6 +182,10 @@ def run(
             border_style="cyan",
         )
     )
+
+    # Show loop category and display active roles for this loop
+    category = loop_info.get("category", "Unknown")
+    console.print(f"\n[bold]Category:[/bold] {category}\n")
 
     console.print(
         "\n[yellow]Note: Full loop execution will integrate with questfoundry-py "
