@@ -219,6 +219,8 @@ def execute_loop_with_orchestrator(
     loop_id: str, loop_info: dict, workspace: Path, project_file: Path
 ) -> None:
     """Execute a loop using questfoundry-py Orchestrator"""
+    from questfoundry.loops.registry import LoopRegistry
+
     logger.debug(f"Initializing WorkspaceManager from {workspace}")
     ws = WorkspaceManager(str(workspace.parent))
 
@@ -231,11 +233,15 @@ def execute_loop_with_orchestrator(
         logger.error(f"Failed to get project info: {e}")
         raise
 
+    # Convert loop_id from hyphenated (CLI) to underscored (questfoundry-py) format
+    qf_loop_id = loop_id.replace("-", "_")
+    logger.debug(f"Converted loop_id: {loop_id} -> {qf_loop_id}")
+
     # Build loop configuration
     config: dict[str, any] = {}
 
     # Get seed if this is story-spark
-    if loop_id == "story-spark":
+    if qf_loop_id == "story_spark":
         seed = validate_story_spark_seed()
         if seed:
             logger.debug(f"Story Spark seed found (length: {len(seed)} chars)")
@@ -243,10 +249,22 @@ def execute_loop_with_orchestrator(
         else:
             logger.warning("Story Spark requires a seed but none was configured")
 
-    # Create Orchestrator
-    logger.debug(f"Creating Orchestrator for loop: {loop_id}")
+    # Initialize LoopRegistry (loads all loops from questfoundry-py)
+    logger.debug("Initializing LoopRegistry")
     try:
-        orchestrator = Orchestrator(workspace=ws)
+        loop_registry = LoopRegistry()
+        num_loops = len(loop_registry.list_loops())
+        logger.debug(f"LoopRegistry initialized with {num_loops} loops")
+    except Exception as e:
+        logger.error(f"Failed to initialize LoopRegistry: {e}")
+        raise
+
+    # Create Orchestrator with the loop registry
+    logger.debug(f"Creating Orchestrator for loop: {qf_loop_id}")
+    try:
+        orchestrator = Orchestrator(
+            workspace=ws, loop_registry=loop_registry
+        )
         logger.debug("Orchestrator initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize Orchestrator: {e}")
@@ -256,7 +274,9 @@ def execute_loop_with_orchestrator(
     logger.info(f"Executing loop {loop_id} with Orchestrator")
     try:
         loop_config = config if config else None
-        result = orchestrator.execute_loop(loop_id, project_id, config=loop_config)
+        result = orchestrator.execute_loop(
+            qf_loop_id, project_id, config=loop_config
+        )
         logger.info(f"Loop execution completed: {loop_id}")
         console.print("[green]✓ Loop execution completed[/green]")
 
