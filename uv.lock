@@ -1157,9 +1157,9 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "questfoundry-py", specifier = ">=0.3.0" },
-    { name = "questfoundry-py", extras = ["all-providers"], marker = "extra == 'all-providers'", specifier = ">=0.3.0" },
-    { name = "questfoundry-py", extras = ["openai"], marker = "extra == 'openai'", specifier = ">=0.3.0" },
+    { name = "questfoundry-py", specifier = ">=0.4.0" },
+    { name = "questfoundry-py", extras = ["all-providers"], marker = "extra == 'all-providers'", specifier = ">=0.4.0" },
+    { name = "questfoundry-py", extras = ["openai"], marker = "extra == 'openai'", specifier = ">=0.4.0" },
     { name = "questionary", specifier = ">=2.0.0" },
     { name = "rich", specifier = ">=13.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
@@ -1171,7 +1171,7 @@ provides-extras = ["all-providers", "dev", "openai"]
 
 [[package]]
 name = "questfoundry-py"
-version = "0.3.0"
+version = "0.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -1180,9 +1180,9 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c1/7e/e280343accae8edff7d055a6f17840db741e3c545ce2b95aa86def3b6479/questfoundry_py-0.3.0.tar.gz", hash = "sha256:823c5cdc29cf5614c3dea81b717ccbf31b34f2c5c66ef81c7a44d28af9606332", size = 380953, upload-time = "2025-11-10T20:23:43.632Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a3/ab/7b94a2e77db63bfca12879c5e898a4761e57869cdbb2e67f033c3646531d/questfoundry_py-0.4.0.tar.gz", hash = "sha256:9ce3064e6bdfdd7038f4a5168a1f120140a6bc6b2e95a45e0c55e1aeb06cbcfb", size = 391438, upload-time = "2025-11-11T06:34:00.019Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/42/ad/27caeac82a7c9685474595f5e0b291d5a0af5f8556acb81e095442415759/questfoundry_py-0.3.0-py3-none-any.whl", hash = "sha256:bfea5c7b01a519172b46c4f33da88161bcfbf67a6e72fb6735e1dc41f08b9f4c", size = 519467, upload-time = "2025-11-10T20:23:42.206Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/ff/d0c985a9d5724b959c45fcdbe2d0bfaa6b3de572aee59c1da1e54b749a0a/questfoundry_py-0.4.0-py3-none-any.whl", hash = "sha256:09668aee8f6d6c030cd0baf147217c730d78657e8f4757a2bda9c5fdd22ac27d", size = 533993, upload-time = "2025-11-11T06:33:58.141Z" },
 ]
 
 [package.optional-dependencies]

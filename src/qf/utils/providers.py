@@ -11,9 +11,9 @@ try:
     QUESTFOUNDRY_AVAILABLE = True
 except ImportError:
     QUESTFOUNDRY_AVAILABLE = False
-    ProviderConfig = None  # type: ignore
-    ProviderRegistry = None  # type: ignore
-    RoleRegistry = None  # type: ignore
+    ProviderConfig = None
+    ProviderRegistry = None
+    RoleRegistry = None
 
 from qf.utils.workspace import get_spec_path
 

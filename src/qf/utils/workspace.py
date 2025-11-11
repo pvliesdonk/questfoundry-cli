@@ -10,7 +10,7 @@ try:
     QUESTFOUNDRY_AVAILABLE = True
 except ImportError:
     QUESTFOUNDRY_AVAILABLE = False
-    WorkspaceManager = None  # type: ignore
+    WorkspaceManager = None
 
 console = Console()
 

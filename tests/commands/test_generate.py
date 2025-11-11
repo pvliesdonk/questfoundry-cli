@@ -3,7 +3,7 @@
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from typer.testing import CliRunner
@@ -218,7 +218,9 @@ def test_generate_image_success(temp_project, shotlist_artifact, mock_role_execu
     assert "SHOT-001" in result.stdout
 
 
-def test_generate_image_with_provider(temp_project, shotlist_artifact, mock_role_execution):
+def test_generate_image_with_provider(
+    temp_project, shotlist_artifact, mock_role_execution
+):
     """Test image generation with provider override."""
     result = runner.invoke(
         app, ["generate", "image", "SHOT-001", "--provider", "dalle"]
@@ -227,7 +229,9 @@ def test_generate_image_with_provider(temp_project, shotlist_artifact, mock_role
     assert "Provider: dalle" in result.stdout
 
 
-def test_generate_image_with_model(temp_project, shotlist_artifact, mock_role_execution):
+def test_generate_image_with_model(
+    temp_project, shotlist_artifact, mock_role_execution
+):
     """Test image generation with model override."""
     result = runner.invoke(
         app, ["generate", "image", "SHOT-001", "--model", "dall-e-3"]
@@ -236,7 +240,9 @@ def test_generate_image_with_model(temp_project, shotlist_artifact, mock_role_ex
     assert "Model: dall-e-3" in result.stdout
 
 
-def test_generate_image_with_provider_and_model(temp_project, shotlist_artifact, mock_role_execution):
+def test_generate_image_with_provider_and_model(
+    temp_project, shotlist_artifact, mock_role_execution
+):
     """Test image generation with both provider and model."""
     result = runner.invoke(
         app,
@@ -283,7 +289,9 @@ def test_generate_audio_success(temp_project, cuelist_artifact, mock_role_execut
     assert "Generated successfully" in result.stdout
 
 
-def test_generate_audio_with_provider(temp_project, cuelist_artifact, mock_role_execution):
+def test_generate_audio_with_provider(
+    temp_project, cuelist_artifact, mock_role_execution
+):
     """Test audio generation with provider override."""
     result = runner.invoke(
         app, ["generate", "audio", "CUE-001", "--provider", "elevenlabs"]
@@ -442,7 +450,9 @@ def test_generate_images_batch_with_provider(temp_project, mock_role_execution):
     assert "Provider: midjourney" in result.stdout
 
 
-def test_generate_images_batch_with_provider_and_model(temp_project, mock_role_execution):
+def test_generate_images_batch_with_provider_and_model(
+    temp_project, mock_role_execution
+):
     """Test batch image generation with both provider and model."""
     # Mock workspace to return pending shotlists as Artifact-like objects
     mock_workspace = mock_role_execution["workspace"]
