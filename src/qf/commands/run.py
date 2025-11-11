@@ -1,16 +1,17 @@
 """Loop execution commands"""
 
-import asyncio
 import logging
 import os
 from pathlib import Path
 
 import typer
 import yaml
+from questfoundry.orchestrator import Orchestrator
+from questfoundry.state import WorkspaceManager
 from rich.console import Console
 from rich.panel import Panel
-from questfoundry.orchestration import Showrunner
-from questfoundry.state import WorkspaceManager
+
+from qf.utils import WORKSPACE_DIR, find_project_file
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -30,8 +31,7 @@ LOOPS = _load_loops()
 
 def get_loop_help() -> str:
     """Generate help text listing all available loops by category"""
-    help_text = "Name of the loop to execute (use 'qf loops' to see all available loops)"
-    return help_text
+    return "Name of the loop to execute (use 'qf loops' to see all available loops)"
 
 
 def display_loops_list() -> None:
@@ -52,7 +52,6 @@ def display_loops_list() -> None:
         if category in categories:
             console.print(f"[bold magenta]{category}:[/bold magenta]")
             for loop_id, loop_info in sorted(categories[category]):
-                display_name = loop_info["display_name"]
                 abbrev = loop_info.get("abbrev", "")
                 desc = loop_info["description"]
                 console.print(f"  [cyan]{loop_id:20}[/cyan] ({abbrev}) - {desc}")
@@ -125,12 +124,11 @@ def run(
     ),
 ) -> None:
     """Execute a loop"""
-    # Run async execution in sync context
-    asyncio.run(_run_async(loop_name, interactive))
+    _run(loop_name, interactive)
 
 
-async def _run_async(loop_name: str, interactive: bool) -> None:
-    """Async loop execution"""
+def _run(loop_name: str, interactive: bool) -> None:
+    """Loop execution"""
     # check if in a project
     project_file = find_project_file()
     if not project_file:
@@ -205,10 +203,10 @@ async def _run_async(loop_name: str, interactive: bool) -> None:
     logger.info("Starting loop execution")
     console.print("[dim]Executing loop with questfoundry-py...[/dim]\n")
 
-    # Execute the loop using questfoundry-py Showrunner
+    # Execute the loop using questfoundry-py Orchestrator
     try:
-        logger.debug("Executing loop with questfoundry-py Showrunner")
-        await execute_loop_with_showrunner(
+        logger.debug("Executing loop with questfoundry-py Orchestrator")
+        execute_loop_with_orchestrator(
             loop_id, loop_info, workspace, project_file
         )
     except Exception as e:
@@ -217,39 +215,54 @@ async def _run_async(loop_name: str, interactive: bool) -> None:
         raise typer.Exit(1)
 
 
-async def execute_loop_with_showrunner(
+def execute_loop_with_orchestrator(
     loop_id: str, loop_info: dict, workspace: Path, project_file: Path
 ) -> None:
-    """Execute a loop using questfoundry-py Showrunner"""
+    """Execute a loop using questfoundry-py Orchestrator"""
     logger.debug(f"Initializing WorkspaceManager from {workspace}")
-    ws = WorkspaceManager(workspace.parent)
+    ws = WorkspaceManager(str(workspace.parent))
+
+    # Get project info
+    try:
+        project_info = ws.get_project_info()
+        project_id = project_info.name
+        logger.debug(f"Project ID: {project_id}")
+    except Exception as e:
+        logger.error(f"Failed to get project info: {e}")
+        raise
+
+    # Build loop configuration
+    config: dict[str, any] = {}
 
     # Get seed if this is story-spark
-    seed = None
     if loop_id == "story-spark":
         seed = validate_story_spark_seed()
-        logger.debug(f"Story Spark seed: {seed[:50] if seed else 'None'}...")
-
-    logger.debug(f"Creating Showrunner for loop: {loop_id}")
-    showrunner = Showrunner(workspace=ws)
-
-    logger.info(f"Executing loop {loop_id} with Showrunner")
-
-    # Execute loop with seed if available
-    try:
-        if seed and loop_id == "story-spark":
-            logger.debug("Executing story-spark with seed")
-            result = await showrunner.run_loop(loop_id, seed=seed)
+        if seed:
+            logger.debug(f"Story Spark seed found (length: {len(seed)} chars)")
+            config["seed"] = seed
         else:
-            result = await showrunner.run_loop(loop_id)
-    except TypeError:
-        # Fallback if seed parameter is not supported
-        logger.debug("Seed parameter not supported, executing without seed")
-        result = await showrunner.run_loop(loop_id)
+            logger.warning("Story Spark requires a seed but none was configured")
 
-    logger.info(f"Loop execution completed: {loop_id}")
-    console.print(f"[green]✓ Loop execution completed[/green]")
+    # Create Orchestrator
+    logger.debug(f"Creating Orchestrator for loop: {loop_id}")
+    try:
+        orchestrator = Orchestrator(workspace=ws)
+        logger.debug("Orchestrator initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize Orchestrator: {e}")
+        raise
 
-    if result:
-        console.print(f"\n[bold]Results:[/bold]")
-        console.print(result)
+    # Execute loop
+    logger.info(f"Executing loop {loop_id} with Orchestrator")
+    try:
+        loop_config = config if config else None
+        result = orchestrator.execute_loop(loop_id, project_id, config=loop_config)
+        logger.info(f"Loop execution completed: {loop_id}")
+        console.print("[green]✓ Loop execution completed[/green]")
+
+        if result:
+            console.print("\n[bold]Results:[/bold]")
+            console.print(result)
+    except Exception as e:
+        logger.error(f"Error during loop execution: {e}")
+        raise
