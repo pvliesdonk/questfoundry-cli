@@ -12,7 +12,7 @@ requires-python = ">=3.11"
 authors = [{name = "Peter Liesdonk", email = "peter@liesdonk.nl"}]
 
 dependencies = [
-    "questfoundry-py>=0.4.0",
+    "questfoundry-py>=0.5.0",
     "typer[all]>=0.9.0",
     "rich>=13.0.0",
     "questionary>=2.0.0",

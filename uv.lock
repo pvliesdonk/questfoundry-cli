@@ -1157,7 +1157,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "questfoundry-py", specifier = ">=0.4.0" },
+    { name = "questfoundry-py", specifier = ">=0.5.0" },
     { name = "questfoundry-py", extras = ["all-providers"], marker = "extra == 'all-providers'", specifier = ">=0.4.0" },
     { name = "questfoundry-py", extras = ["openai"], marker = "extra == 'openai'", specifier = ">=0.4.0" },
     { name = "questionary", specifier = ">=2.0.0" },
@@ -1171,7 +1171,7 @@ provides-extras = ["all-providers", "dev", "openai"]
 
 [[package]]
 name = "questfoundry-py"
-version = "0.4.0"
+version = "0.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -1180,9 +1180,9 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a3/ab/7b94a2e77db63bfca12879c5e898a4761e57869cdbb2e67f033c3646531d/questfoundry_py-0.4.0.tar.gz", hash = "sha256:9ce3064e6bdfdd7038f4a5168a1f120140a6bc6b2e95a45e0c55e1aeb06cbcfb", size = 391438, upload-time = "2025-11-11T06:34:00.019Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4b/28/617a50d3a6f83250ce83c0293757c55a0e4c845c9d4baa1c511e1e145c76/questfoundry_py-0.5.0.tar.gz", hash = "sha256:60adcef762d886dd2cbfca2e116fa6002b7af3500582cf3ad3541a5e28842020", size = 441881, upload-time = "2025-11-11T13:42:36.371Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5e/ff/d0c985a9d5724b959c45fcdbe2d0bfaa6b3de572aee59c1da1e54b749a0a/questfoundry_py-0.4.0-py3-none-any.whl", hash = "sha256:09668aee8f6d6c030cd0baf147217c730d78657e8f4757a2bda9c5fdd22ac27d", size = 533993, upload-time = "2025-11-11T06:33:58.141Z" },
+    { url = "https://files.pythonhosted.org/packages/af/27/448953e00695a259efcfffa2384738dee18b4026467e67a2f3d9195ed2a9/questfoundry_py-0.5.0-py3-none-any.whl", hash = "sha256:139c707c89ab1bb029153eaebd8ce2f37f39f2bbdea621f3a7b7d2c1e6213f46", size = 589621, upload-time = "2025-11-11T13:42:34.664Z" },
 ]
 
 [package.optional-dependencies]
