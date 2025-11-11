@@ -11,7 +11,10 @@ from rich.tree import Tree
 from qf.utils import find_project_file
 
 console = Console()
-app = typer.Typer(help="Manage project configuration")
+app = typer.Typer(
+    help="Manage project configuration",
+    invoke_without_command=True,
+)
 
 
 def get_config_path() -> Path:
@@ -39,7 +42,7 @@ def load_config() -> dict[str, Any]:
     """Load configuration from YAML file"""
     config_path = get_config_path()
     try:
-        with open(config_path) as f:
+        with open(config_path, encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
     except yaml.YAMLError as e:
         console.print(f"[red]Error parsing config file: {e}[/red]")
@@ -53,7 +56,7 @@ def save_config(config: dict[str, Any]) -> None:
     """Save configuration to YAML file"""
     config_path = get_config_path()
     try:
-        with open(config_path, "w") as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             yaml.safe_dump(config, f, default_flow_style=False, sort_keys=False)
     except (OSError, PermissionError) as e:
         console.print(f"[red]Error writing config file: {e}[/red]")
@@ -92,9 +95,47 @@ def get_nested_value(config: dict[str, Any], key_path: str) -> tuple[Any, bool]:
     return current, True
 
 
+def normalize_provider_key(config: dict[str, Any], keys: list[str]) -> list[str]:
+    """
+    Normalize keys for case-insensitive provider name matching.
+    If we're in the providers section with a provider name, find the actual key.
+    """
+    if len(keys) < 3 or keys[0] != "providers":
+        return keys
+
+    # For paths like 'providers.text.OpenAI.api_key', normalize the provider name (keys[2])
+    normalized = keys[:2]  # ['providers', 'text']
+
+    # Get or create the section
+    current = config
+    for key in normalized:
+        if key not in current:
+            current[key] = {}
+        current = current[key]
+
+    # Find the actual provider name (case-insensitive)
+    if isinstance(current, dict):
+        provider_name = keys[2]
+        # Look for a case-insensitive match
+        matching_key = None
+        for existing_key in current.keys():
+            if existing_key.lower() == provider_name.lower():
+                matching_key = existing_key
+                break
+        # Use the existing key if found, otherwise use the provided one
+        normalized.append(matching_key or provider_name)
+    else:
+        normalized.append(keys[2])
+
+    # Add remaining keys
+    normalized.extend(keys[3:])
+    return normalized
+
+
 def set_nested_value(config: dict[str, Any], key_path: str, value: str) -> None:
     """Set a nested value in config using dot notation"""
     keys = key_path.split(".")
+    keys = normalize_provider_key(config, keys)
     current = config
 
     # Navigate to the parent of the target key
@@ -219,3 +260,23 @@ def set_config(
         # File I/O errors or YAML serialization errors
         console.print(f"[red]Error setting configuration: {e}[/red]")
         raise typer.Exit(1)
+
+
+@app.callback(invoke_without_command=True)
+def config_callback(ctx: typer.Context) -> None:
+    """Default behavior for config command - show configuration when no subcommand"""
+    # If a subcommand was provided, don't do anything
+    if ctx.invoked_subcommand is not None:
+        return
+    # Otherwise show the configuration (default to list)
+    try:
+        config = load_config()
+        if not config:
+            console.print("\n[yellow]Configuration is empty[/yellow]\n")
+            return
+        tree = print_config_tree(config)
+        console.print()
+        console.print(tree)
+        console.print()
+    except typer.Exit:
+        raise

@@ -51,7 +51,7 @@ def get_schema(name: str) -> Any:
     if not schema_file.exists():
         raise FileNotFoundError(f"Schema not found: {name}")
 
-    with open(schema_file) as f:
+    with open(schema_file, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -67,16 +67,30 @@ def list_() -> None:
 
     table = Table(title="Available Schemas")
     table.add_column("Schema Name", style="cyan")
+    table.add_column("Title", style="green")
     table.add_column("Type", style="magenta")
 
     for schema_name in sorted(schemas):
         try:
             schema = get_schema(schema_name)
+            schema_title: str = schema.get("title", schema_name)
             schema_type: str = schema.get("type", "unknown")
-            table.add_row(schema_name, schema_type)
-        except (FileNotFoundError, json.JSONDecodeError, AttributeError):
-            # Schema file missing, malformed JSON, or missing 'type' field
-            table.add_row(schema_name, "error")
+            table.add_row(schema_name, schema_title, schema_type)
+        except FileNotFoundError as e:
+            console.print(
+                f"[red]Error loading schema '{schema_name}': {e}[/red]"
+            )
+            raise typer.Exit(1)
+        except json.JSONDecodeError as e:
+            console.print(
+                f"[red]Error parsing schema '{schema_name}': {e}[/red]"
+            )
+            raise typer.Exit(1)
+        except Exception as e:
+            console.print(
+                f"[red]Unexpected error loading schema '{schema_name}': {e}[/red]"
+            )
+            raise typer.Exit(1)
 
     console.print(table)
 
@@ -96,18 +110,34 @@ def show(name: str = typer.Argument(..., help="Schema name")) -> None:
 def validate(name: str = typer.Argument(..., help="Schema name")) -> None:
     """Validate a schema file"""
     try:
-        from questfoundry.validators import validate_schema as qf_validate_schema
+        schema = get_schema(name)
 
-        is_valid = qf_validate_schema(name)
-        if is_valid:
-            console.print(f"[green]✓ Schema is valid: {name}[/green]")
-        else:
-            console.print(f"[red]✗ Schema is invalid: {name}[/red]")
-            raise typer.Exit(1)
-    except ImportError:
-        console.print(
-            "[yellow]Schema validation not yet implemented in questfoundry-py[/yellow]"
-        )
+        # Try using questfoundry-py validation if available
+        try:
+            from questfoundry.validators import validate_schema as qf_validate_schema
+
+            is_valid = qf_validate_schema(schema)
+            if is_valid:
+                console.print(f"[green]✓ Schema is valid: {name}[/green]")
+            else:
+                console.print(f"[red]✗ Schema is invalid: {name}[/red]")
+                raise typer.Exit(1)
+        except (ImportError, AttributeError):
+            # Fallback: basic JSON schema validation
+            import jsonschema
+            from jsonschema import Draft7Validator, FormatChecker
+
+            try:
+                Draft7Validator.check_schema(schema)
+                console.print(f"[green]✓ Schema is valid: {name}[/green]")
+            except jsonschema.SchemaError as e:
+                console.print(f"[red]✗ Schema is invalid: {e.message}[/red]")
+                raise typer.Exit(1)
+    except FileNotFoundError as e:
+        console.print(f"[red]Schema file not found: {name}[/red]")
+        raise typer.Exit(1)
+    except json.JSONDecodeError as e:
+        console.print(f"[red]Error parsing schema file: {e}[/red]")
         raise typer.Exit(1)
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")

@@ -18,5 +18,5 @@ def find_project_file() -> Path | None:
 
 def load_project_metadata(project_file: Path) -> Any:
     """Load project metadata from .qfproj file"""
-    with open(project_file) as f:
+    with open(project_file, encoding="utf-8") as f:
         return json.load(f)
