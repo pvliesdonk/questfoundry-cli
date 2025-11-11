@@ -7,10 +7,11 @@ from rich.console import Console
 
 try:
     from questfoundry.state import WorkspaceManager
+
     QUESTFOUNDRY_AVAILABLE = True
 except ImportError:
     QUESTFOUNDRY_AVAILABLE = False
-    WorkspaceManager = None
+    WorkspaceManager = type("WorkspaceManager", (), {})  # type: ignore[assignment]
 
 console = Console()
 

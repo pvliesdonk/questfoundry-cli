@@ -8,12 +8,13 @@ from rich.console import Console
 try:
     from questfoundry.providers import ProviderConfig, ProviderRegistry
     from questfoundry.roles import RoleRegistry
+
     QUESTFOUNDRY_AVAILABLE = True
 except ImportError:
     QUESTFOUNDRY_AVAILABLE = False
-    ProviderConfig = None
-    ProviderRegistry = None
-    RoleRegistry = None
+    ProviderConfig = type("ProviderConfig", (), {})  # type: ignore[assignment]
+    ProviderRegistry = type("ProviderRegistry", (), {})  # type: ignore[assignment]
+    RoleRegistry = type("RoleRegistry", (), {})  # type: ignore[assignment]
 
 from qf.utils.workspace import get_spec_path
 
