@@ -1,5 +1,6 @@
 """Provider management commands"""
 
+import os
 from typing import Any
 
 import typer
@@ -15,31 +16,40 @@ app = typer.Typer(help="Manage AI providers")
 
 # Known providers and their types
 KNOWN_PROVIDERS = {
-    "openai": {"type": "text", "name": "OpenAI"},
-    "anthropic": {"type": "text", "name": "Anthropic"},
-    "google": {"type": "text", "name": "Google (Gemini)"},
-    "cohere": {"type": "text", "name": "Cohere"},
-    "stability": {"type": "image", "name": "Stability AI"},
-    "midjourney": {"type": "image", "name": "Midjourney"},
-    "dalle": {"type": "image", "name": "DALL-E"},
+    "openai": {"type": "text", "name": "OpenAI", "env_vars": ["OPENAI_API_KEY"]},
+    "anthropic": {"type": "text", "name": "Anthropic", "env_vars": ["ANTHROPIC_API_KEY"]},
+    "google": {"type": "text", "name": "Google (Gemini)", "env_vars": ["GOOGLE_API_KEY"]},
+    "cohere": {"type": "text", "name": "Cohere", "env_vars": ["COHERE_API_KEY"]},
+    "stability": {"type": "image", "name": "Stability AI", "env_vars": ["STABILITY_API_KEY"]},
+    "midjourney": {"type": "image", "name": "Midjourney", "env_vars": ["MIDJOURNEY_API_KEY"]},
+    "dalle": {"type": "image", "name": "DALL-E", "env_vars": ["OPENAI_API_KEY"]},
+    "ollama": {"type": "text", "name": "Ollama (Local)", "env_vars": ["OLLAMA_BASE_URL"]},
+    "a1111": {"type": "image", "name": "A1111 (Local)", "env_vars": ["A1111_BASE_URL"]},
 }
 
 
 def get_provider_status(provider_id: str, config: dict[str, Any]) -> str:
-    """Check if provider is configured"""
+    """Check if provider is configured via config or environment variables"""
     providers = config.get("providers", {})
 
-    # Check text providers
+    # Check text providers in config
     text_providers = providers.get("text", {})
     if provider_id in text_providers and isinstance(text_providers[provider_id], dict):
         return "configured"
 
-    # Check image providers
+    # Check image providers in config
     image_providers = providers.get("image", {})
     if provider_id in image_providers and isinstance(
         image_providers[provider_id], dict
     ):
         return "configured"
+
+    # Check environment variables
+    if provider_id in KNOWN_PROVIDERS:
+        env_vars = KNOWN_PROVIDERS[provider_id].get("env_vars", [])
+        for env_var in env_vars:
+            if os.environ.get(env_var):
+                return "auto-configured"
 
     return "not configured"
 
@@ -66,6 +76,8 @@ def add_providers_to_table(
             # Color status
             if status == "configured":
                 status_display = "[green]✓ configured[/green]"
+            elif status == "auto-configured":
+                status_display = "[yellow]⚙ auto-configured[/yellow]"
             else:
                 status_display = "[dim]not configured[/dim]"
 

@@ -19,7 +19,7 @@ from qf.commands.validate import (
 )
 from qf.utils import find_project_file
 
-app = typer.Typer(help="Run quality checks and gatechecks")
+app = typer.Typer(help="Run quality checks and gatechecks", invoke_without_command=True)
 console = Console()
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ def load_all_artifacts(workspace: Path) -> list[ArtifactData]:
         if artifact_dir.is_dir():
             for json_file in artifact_dir.glob("*.json"):
                 try:
-                    with open(json_file) as f:
+                    with open(json_file, encoding="utf-8") as f:
                         data = json.load(f)
                     artifacts.append(
                         ArtifactData(path=json_file, data=data, error=None)
@@ -344,3 +344,13 @@ def run(
 
     if not all_passed:
         raise typer.Exit(1)
+
+
+@app.callback(invoke_without_command=True)
+def check_callback(ctx: typer.Context) -> None:
+    """Default behavior for check command - run all checks when no subcommand"""
+    # If a subcommand was provided, don't do anything
+    if ctx.invoked_subcommand is not None:
+        return
+    # Otherwise run checks with default options
+    ctx.invoke(run)
