@@ -2,6 +2,28 @@
 
 **Date:** 2025-11-11
 **Issue:** Interactive mode was not fully addressed in NEW_CLI_DESIGN.md
+**Status:** ✅ Research complete - Implementation path identified
+
+---
+
+## Executive Summary
+
+**Key Finding:** Showrunner coordinates ALL human interaction (as "product manager").
+
+**How It Works:**
+1. questfoundry-py v0.5.0 has complete `human_callback` infrastructure
+2. Roles inherit `ask_human()` method to ask questions
+3. Showrunner has `initialize_role_with_config(human_callback=...)` to distribute callback to roles
+4. CLI provides Rich UI callback via `config["human_callback"]`
+5. All agent questions funnel through this callback back to CLI
+
+**Implementation Status:**
+- ✅ Library infrastructure exists (roles/human_callback.py, roles/base.py, roles/showrunner.py)
+- ✅ Spec defines interactive mode (spec/07-ui/README.md:198-254)
+- ⚠️  Orchestrator needs small enhancement to wire it up
+- 📋 CLI needs to implement Rich callback and `--interactive` flag
+
+**Timeline:** Can be implemented in Phase 2 (loop execution) alongside basic loop functionality.
 
 ---
 
@@ -185,74 +207,60 @@ def cli_interactive_callback(question: str, context: dict[str, Any]) -> str:
         ).ask()
 ```
 
-#### 2. Pass Callback to Orchestrator/Roles
+#### 2. Pass Callback via Config (CORRECT APPROACH)
 
-**Option A: Via RoleRegistry (if supported)**
+Based on research, the clean integration path is through Orchestrator config:
 
 ```python
 # In qf/commands/loop.py
 
+from questfoundry.orchestrator import Orchestrator
+from questfoundry.state import WorkspaceManager
+from questfoundry.providers.config import ProviderConfig
+from questfoundry.providers.registry import ProviderRegistry
+
 def run(loop_id: str, interactive: bool = False):
-    ws = get_workspace_manager()
-    provider_registry = get_provider_registry()
+    # Load workspace
+    ws = WorkspaceManager(find_workspace())
 
-    # Create human callback
-    human_callback = None
-    if interactive:
-        from ..interactive.callback import cli_interactive_callback
-        human_callback = cli_interactive_callback
+    # Load providers
+    config = ProviderConfig.from_file(ws.path / ".questfoundry" / "config.yml")
+    provider_registry = ProviderRegistry(config)
 
-    # Create role registry with callback
-    role_registry = RoleRegistry(
-        provider_registry,
-        human_callback=human_callback  # ← Need to verify this works
-    )
-
-    # Create orchestrator with role registry
-    orchestrator = Orchestrator(
-        workspace=ws,
-        provider_registry=provider_registry,
-        role_registry=role_registry
-    )
-
+    # Create orchestrator
+    orchestrator = Orchestrator(ws, provider_registry)
     orchestrator.initialize(provider_name="openai")
-    result = orchestrator.execute_loop(loop_id)
-```
 
-**Option B: Via Loop Context (if supported)**
+    # Get project ID
+    project_id = ws.get_project_info().project_id
 
-```python
-# If loops support human_callback in context
-
-def run(loop_id: str, interactive: bool = False):
-    # ... setup
-
-    config = {}
+    # Prepare loop config
+    loop_config = {}
     if interactive:
         from ..interactive.callback import cli_interactive_callback
-        config["human_callback"] = cli_interactive_callback
+        loop_config["human_callback"] = cli_interactive_callback
 
-    result = orchestrator.execute_loop(loop_id, config=config)
+    # Execute loop with config
+    result = orchestrator.execute_loop(
+        loop_id=loop_id,
+        project_id=project_id,
+        config=loop_config  # ← Callback passed here
+    )
+
+    return result
 ```
 
-**Option C: Monkey-patch roles (fallback)**
+**How it works:**
+1. CLI creates `cli_interactive_callback` function
+2. Passes it in `config["human_callback"]`
+3. Orchestrator extracts callback from config
+4. Showrunner uses `initialize_role_with_config()` to create roles
+5. Each role receives the callback and can call `self.ask_human()`
+6. Questions route through callback back to CLI
+7. CLI displays Rich UI and collects user response
+8. Response returns to role, which continues execution
 
-```python
-# If no direct support, set callback on role instances
-
-def run(loop_id: str, interactive: bool = False):
-    # ... setup orchestrator
-
-    if interactive:
-        from ..interactive.callback import cli_interactive_callback
-
-        # Get all roles and set callback
-        for role_name in orchestrator.role_registry.list_roles():
-            role = orchestrator.role_registry.get_role(role_name)
-            role.human_callback = cli_interactive_callback
-
-    result = orchestrator.execute_loop(loop_id)
-```
+**Note:** This requires a small enhancement to Orchestrator (see "Option A" in Research section below).
 
 ### User Experience
 
@@ -287,53 +295,83 @@ Artifacts created: 5
 
 ---
 
-## Questions to Answer
+## Questions Answered Through Research
 
-Before implementing, need to verify:
+### 1. Does RoleRegistry support human_callback parameter?
 
-1. **Does RoleRegistry support human_callback parameter?**
-   - Check `RoleRegistry.__init__()` and `.get_role()`
-   - If yes, pass it when creating roles
-   - If no, need alternative approach
+**Answer:** No, but it doesn't need to.
 
-2. **Does Orchestrator/Loop pass human_callback to roles?**
-   - Check `Orchestrator.execute_loop()` flow
-   - Check if LoopContext supports human_callback
-   - Trace how roles are instantiated during loop execution
+- `RoleRegistry.get_role()` does NOT accept `human_callback` (confirmed in registry.py:142-149)
+- However, Showrunner has `initialize_role_with_config()` that DOES accept it (showrunner.py:393-463)
+- The correct path: Orchestrator → Showrunner → Roles (not Orchestrator → RoleRegistry → Roles)
 
-3. **Which roles actually use ask_human()?**
-   - Check which role implementations call `self.ask_human()`
-   - Showrunner? Lore Weaver? Scene Smith?
-   - Know which loops benefit from interactive mode
+### 2. Does Orchestrator/Loop pass human_callback to roles?
 
-4. **Are there examples/tests of interactive mode?**
-   - Check `/tmp/questfoundry-py/tests/` for interactive tests
-   - Look for examples in docs
+**Answer:** Not yet, but the infrastructure exists.
+
+- `Orchestrator.execute_loop()` accepts `config` dict (orchestrator.py:190)
+- `LoopContext` stores this config (loops/base.py:103)
+- Currently Orchestrator uses RoleRegistry.get_role() directly (orchestrator.py:227-231)
+- **Need enhancement:** Extract `human_callback` from config and route through Showrunner
+
+### 3. Which roles actually use ask_human()?
+
+**Answer:** All roles CAN, implementation-dependent.
+
+- All roles inherit from `Role` base class which has `ask_human()` method (roles/base.py)
+- Spec examples show Lore Weaver asking questions (spec/07-ui/README.md:214-226)
+- Spec says questions arise from: "Ambiguity that blocks progress, forking choices, facts" (spec/05-prompts/_shared/human_interaction.md:17-20)
+- In practice: Lore Weaver, Scene Smith, Plotwright likely to ask questions
+- Showrunner coordinates all interactions as "product manager"
+
+### 4. Are there examples/tests of interactive mode?
+
+**Answer:** Spec has examples, implementation is partial.
+
+- Spec shows interactive mode workflow (spec/07-ui/README.md:198-244)
+- human_callback infrastructure exists (roles/human_callback.py)
+- Roles support ask_human() (roles/base.py)
+- **Missing piece:** Orchestrator doesn't wire it up yet
 
 ---
 
 ## Action Items
 
-### Immediate (Before Implementation)
+### Research (COMPLETED ✅)
 
-- [ ] Read `RoleRegistry` implementation fully
-- [ ] Trace `Orchestrator.execute_loop()` to see role creation
-- [ ] Check tests for interactive mode examples
-- [ ] Verify which roles use `ask_human()`
+- [x] Read `RoleRegistry` implementation fully
+- [x] Trace `Orchestrator.execute_loop()` to see role creation
+- [x] Check spec for interactive mode examples
+- [x] Verify which roles use `ask_human()`
+- [x] Understand Showrunner's coordination role
 
-### Implementation
+### Library Enhancement (questfoundry-py)
 
-- [ ] Create `src/qf/interactive/callback.py`
-- [ ] Add `--interactive` flag to `qf loop run`
-- [ ] Wire up human_callback (method TBD based on research)
-- [ ] Test with mock provider
-- [ ] Document interactive mode in README
+**Optional but recommended:**
+- [ ] Enhance `Orchestrator.execute_loop()` to extract `human_callback` from config
+- [ ] Modify role instantiation to use `showrunner.initialize_role_with_config()`
+- [ ] Add integration test for interactive mode
+
+**Alternative (CLI workaround):**
+- [ ] CLI can work around by passing callback via config
+- [ ] Relies on existing `showrunner.initialize_role_with_config()` method
+
+### CLI Implementation
+
+- [ ] Create `src/qf/interactive/callback.py` with Rich UI callback
+- [ ] Add `--interactive` flag to `qf loop run` command
+- [ ] Pass callback via `config["human_callback"]`
+- [ ] Display agent questions with Rich panels
+- [ ] Collect responses with questionary
+- [ ] Document interactive mode in CLI README
 
 ### Testing
 
-- [ ] Unit test callback UI formatting
-- [ ] Integration test with mock role asking questions
+- [ ] Unit test: CLI callback UI formatting
+- [ ] Integration test: Mock role asking questions
 - [ ] End-to-end test: `qf loop run --interactive`
+- [ ] Test multi-turn conversations
+- [ ] Test with/without suggestions
 
 ---
 
@@ -393,10 +431,110 @@ ui:
 
 ---
 
+## Research Complete: How It Actually Works
+
+After studying questfoundry-py v0.5.0 implementation:
+
+### Current Architecture
+
+**Role Support (✅ Works):**
+- `Role.__init__()` accepts `human_callback` parameter
+- Roles call `self.ask_human(question, suggestions)` to interact
+- Default is `batch_mode_callback` (auto-responds)
+
+**Showrunner's Job:**
+- Showrunner has `initialize_role_with_config(role_class, registry, human_callback=...)` method
+- This method creates role instances WITH the human_callback
+- Located: `/tmp/questfoundry-py/src/questfoundry/roles/showrunner.py:393-463`
+
+**Current Gap:**
+- `Orchestrator.execute_loop()` uses `RoleRegistry.get_role()` to create roles
+- `RoleRegistry.get_role()` does NOT accept or pass `human_callback`
+- Roles are instantiated WITHOUT human interaction capability
+
+**The Spec's Intent:**
+> "Showrunner should be responsible for all human interaction. It's the product manager so to speak"
+
+This means:
+1. Showrunner coordinates all questions from other roles
+2. CLI provides human_callback to Showrunner
+3. Showrunner distributes callback to roles it initializes
+4. All agent questions funnel through Showrunner's coordination
+
+### The Right Integration Path
+
+**Option A: Extend Orchestrator to support human_callback (RECOMMENDED)**
+
+The Orchestrator should be enhanced to:
+1. Accept `human_callback` in config
+2. Pass it to Showrunner
+3. Showrunner uses `initialize_role_with_config()` to create roles with the callback
+
+```python
+# In Orchestrator.execute_loop()
+
+def execute_loop(
+    self,
+    loop_id: str,
+    project_id: str,
+    artifacts: list[Artifact] | None = None,
+    config: dict[str, Any] | None = None,
+) -> LoopResult:
+    # Extract human_callback from config
+    human_callback = (config or {}).get("human_callback")
+
+    # Get showrunner
+    showrunner = self.role_registry.get_role("showrunner")
+
+    # Let Showrunner initialize roles WITH callback
+    role_instances = {}
+    for role_name in required_roles:
+        role_class = self.role_registry._roles[role_name]
+        role_instances[role_name] = showrunner.initialize_role_with_config(
+            role_class=role_class,
+            registry=self.provider_registry,
+            human_callback=human_callback,  # ← Showrunner distributes to all roles
+        )
+
+    # Rest of loop execution...
+```
+
+**Option B: Extend RoleRegistry to accept human_callback (ALTERNATIVE)**
+
+Add human_callback parameter to RoleRegistry.get_role():
+
+```python
+# In RoleRegistry.get_role()
+
+def get_role(
+    self,
+    name: str,
+    provider: TextProvider | None = None,
+    provider_name: str | None = None,
+    human_callback: HumanCallback | None = None,  # ← Add this
+) -> Role:
+    # ...existing provider setup...
+
+    instance = role_class(
+        provider=provider,
+        spec_path=self.spec_path,
+        config=config,
+        human_callback=human_callback,  # ← Pass through
+    )
+```
+
+**Recommendation:** Option A aligns better with spec's intent that Showrunner coordinates human interaction.
+
 ## Status
 
-**Research needed:** Verify integration path (RoleRegistry vs LoopContext vs other)
+**Research:** ✅ COMPLETE
 
-**Implementation:** Deferred until research complete
+**Findings:**
+- Roles support human_callback (via base.py)
+- Showrunner has `initialize_role_with_config()` method designed for this
+- Orchestrator currently bypasses this and uses RoleRegistry directly
+- Need to enhance Orchestrator to route through Showrunner for interactive mode
 
-**Priority:** Include in Phase 2 (loop execution) design
+**Implementation:** Ready to proceed
+
+**Priority:** HIGH - Include in Phase 2 (loop execution) design
