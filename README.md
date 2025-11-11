@@ -216,7 +216,14 @@ qf run codex-expansion
 qf run style-tuneup
 ```
 
-**Note**: Currently, loop execution runs in simulation/demo mode. Full file updates and project changes require Layer 6 integration with questfoundry-py's Showrunner.
+**Requirements**: To execute loops, you need questfoundry-py installed:
+```bash
+pip install questfoundry-py[openai]
+# Or with all providers
+pip install questfoundry-py[all-providers]
+```
+
+Loop execution uses the questfoundry-py Showrunner to intelligently guide your creative process, updating project artifacts and managing state automatically.
 
 ### Schema Management
 
@@ -338,11 +345,18 @@ qf --log-level debug check
 qf --log-level trace run hook-harvest
 ```
 
-### Loop execution doesn't seem to do anything
+### Loop execution requires questfoundry-py
 
-Loop execution is currently in simulation/demo mode. Full file updates and project changes require Layer 6 integration with questfoundry-py's Showrunner, which is coming in a future release.
+Loop execution uses questfoundry-py's Showrunner to actually update your project. If it's not installed, you'll see a demonstration instead of real execution.
 
-To debug loop execution:
+**Solution**: Install questfoundry-py with providers:
+```bash
+pip install questfoundry-py[openai]
+# Or with all providers for local and cloud models
+pip install questfoundry-py[all-providers]
+```
+
+To debug loop execution and see what's happening:
 ```bash
 qf --log-level debug run story-spark
 ```

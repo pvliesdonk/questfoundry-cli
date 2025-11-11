@@ -1,5 +1,6 @@
 """Loop execution commands"""
 
+import asyncio
 import logging
 import os
 import time
@@ -18,6 +19,16 @@ from qf.formatting.iterations import (
 from qf.formatting.loop_progress import LoopProgressTracker
 from qf.formatting.loop_summary import display_loop_summary, suggest_next_loop
 from qf.utils import WORKSPACE_DIR, find_project_file
+
+try:
+    from questfoundry.orchestration import Showrunner
+    from questfoundry.state import WorkspaceManager
+
+    QUESTFOUNDRY_AVAILABLE = True
+except ImportError:
+    QUESTFOUNDRY_AVAILABLE = False
+    Showrunner = None  # type: ignore
+    WorkspaceManager = None  # type: ignore
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -132,6 +143,12 @@ def run(
     ),
 ) -> None:
     """Execute a loop"""
+    # Run async execution in sync context
+    asyncio.run(_run_async(loop_name, interactive))
+
+
+async def _run_async(loop_name: str, interactive: bool) -> None:
+    """Async loop execution"""
     # check if in a project
     project_file = find_project_file()
     if not project_file:
@@ -203,11 +220,60 @@ def run(
     category = loop_info.get("category", "Unknown")
     console.print(f"\n[bold]Category:[/bold] {category}\n")
 
-    console.print("[yellow]⚠ Note: This is a simulation/demo[/yellow]")
-    console.print("Full loop execution with file updates requires Layer 6 integration.\n")
-    logger.info("Starting loop execution (simulation mode)")
-    console.print("[dim]Running loop simulation...[/dim]\n")
+    logger.info("Starting loop execution")
+    console.print("[dim]Executing loop with questfoundry-py...[/dim]\n")
 
+    # Try to use real questfoundry-py execution
+    if QUESTFOUNDRY_AVAILABLE:
+        try:
+            logger.debug("questfoundry-py is available, attempting real loop execution")
+            await execute_loop_with_showrunner(
+                loop_id, loop_info, workspace, project_file
+            )
+        except Exception as e:
+            logger.error(f"Error executing loop with questfoundry-py: {e}")
+            console.print(
+                f"[yellow]⚠ Loop execution error:[/yellow] {e}\n"
+            )
+            console.print(
+                "[dim]Showing demonstration execution instead...[/dim]\n"
+            )
+            show_demo_execution(loop_info)
+    else:
+        logger.warning("questfoundry-py not available, showing demonstration")
+        console.print(
+            "[yellow]Note:[/yellow] questfoundry-py not installed.\n"
+            "Install with: [green]pip install questfoundry-py[openai][/green]\n"
+        )
+        show_demo_execution(loop_info)
+
+
+async def execute_loop_with_showrunner(
+    loop_id: str, loop_info: dict, workspace: Path, project_file: Path
+) -> None:
+    """Execute a loop using questfoundry-py Showrunner"""
+    from questfoundry.orchestration import Showrunner
+    from questfoundry.state import WorkspaceManager
+
+    logger.debug(f"Initializing WorkspaceManager from {workspace}")
+    ws = WorkspaceManager(workspace.parent)
+
+    logger.debug(f"Creating Showrunner for loop: {loop_id}")
+    showrunner = Showrunner(workspace=ws)
+
+    logger.info(f"Executing loop {loop_id} with Showrunner")
+    result = await showrunner.run_loop(loop_id)
+
+    logger.info(f"Loop execution completed: {loop_id}")
+    console.print(f"[green]✓ Loop execution completed[/green]")
+
+    if result:
+        console.print(f"\n[bold]Results:[/bold]")
+        console.print(result)
+
+
+def show_demo_execution(loop_info: dict) -> None:
+    """Show demonstration of loop execution"""
     # Initialize iteration tracker for multi-iteration support
     progress_tracker = LoopProgressTracker(loop_name=loop_info['display_name'])
     progress_tracker.start_loop()
@@ -257,13 +323,19 @@ def run(
     display_efficiency_metrics(progress_tracker)
 
     # Display summary
-    next_action = suggest_next_loop(loop_id)
+    loop_id = None
+    for lid, linfo in LOOPS.items():
+        if linfo['display_name'] == loop_info['display_name']:
+            loop_id = lid
+            break
+
+    next_action = suggest_next_loop(loop_id) if loop_id else None
     display_loop_summary(
         loop_name=loop_info['display_name'],
         loop_abbrev=loop_info['abbrev'],
         duration=progress_tracker.total_duration,
-        tu_id=None,  # will be populated when integrated with Layer 6
-        artifacts=[],  # will be populated when integrated with Layer 6
+        tu_id=None,
+        artifacts=[],
         activities=[],
         next_action=next_action,
     )
